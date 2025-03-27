@@ -1,0 +1,78 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# SODAV Monitor Tech Stack Document
+
+This document explains in everyday language the technology choices made for SODAV Monitor, a music broadcasting monitoring solution specifically designed for radio stations. Below, you will find a breakdown of the key technologies used, their roles, and the benefits they bring to the overall project.
+
+## Frontend Technologies
+
+The frontend is all about the parts of the application you see and interact with. Its design ensures a clean, modern, and responsive user experience:
+
+- **Next.js 14 (App Router):** Provides a modern framework for building dynamic web pages. Its structure allows for fast and scalable routing, making sure users experience smooth and seamless navigation.
+- **TypeScript:** Adds type safety to our JavaScript code, reducing bugs and making the development process more reliable. This ensures that the user interface remains stable even as new features are added.
+- **Tailwind CSS:** A utility-first CSS framework that speeds up styling the interface with consistent design patterns. It helps create a professional, modern look with a blue and grey palette combined with bright accents for emphasis.
+- **Shadcn Components:** These pre-built, customizable UI components ensure consistency throughout the dashboard and analytics pages while speeding up development. They provide interactive elements such as charts and buttons that users can easily understand and interact with.
+
+These technologies work together to deliver an interface that is both visually appealing and highly interactive, ensuring that copyright managers can monitor and analyze data with ease.
+
+## Backend Technologies
+
+The backend is responsible for the data processing, storage, and overall logic behind SODAV Monitor. Here’s a look at the key technologies powering the backend:
+
+- **Supabase (with PostgreSQL):** Acts as the managed database solution. It stores all data about airplay, ISRC codes, and audio fingerprints efficiently while supporting scalability. Indexing on key fields like ISRC and fingerprints further optimizes performance.
+- **RESTful API:** Serves data to the frontend and handles operations like data capture for song logs and report generation. This API ensures that information flows smoothly between the user interface and the backend services.
+- **Music Recognition Tools:**
+  - **Acoustid:** Used as the primary service for identifying music tracks by comparing audio fingerprints.
+  - **Audd:** Serves as a backup option if Acoustid does not return a match, ensuring that the system has robust identification capabilities.
+- **RadioBrowser API:** Retrieves active Senegalese radio stations, which ensures that monitoring focuses on currently broadcasting channels. This improves resource management and accuracy in song detection.
+
+Combining these backend technologies guarantees reliable data management and robust identification processes for a seamless monitoring experience.
+
+## Infrastructure and Deployment
+
+Reliable infrastructure and streamlined deployment processes keep the application running smoothly and ensure that updates are delivered quickly:
+
+- **Hosting & Deployment:** The project is designed to be hosted on popular cloud platforms (for example, Vercel, though specific provider may vary) ensuring high availability and performance.
+- **CI/CD Pipelines:** Automated workflows (using tools such as GitHub Actions or similar services) enable rapid testing and deployment. This helps reduce downtime and ensures that new features and fixes are deployed smoothly.
+- **Version Control Systems:** Code management is handled through systems like Git, which allow for efficient collaboration, version tracking, and rollback capabilities when needed.
+
+These infrastructure choices help maintain service reliability, scalability, and seamless deployment of updates.
+
+## Third-Party Integrations
+
+Integrating trusted third-party services enriches the functionality of the application while saving development time:
+
+- **Supabase Authentication:** Manages secure user login and role-based access control, ensuring that only authorized users (like copyright managers) can access sensitive data.
+- **Acoustid & Audd:** Provide accurate music identification using advanced audio recognition technologies.
+- **RadioBrowser API:** Connects SODAV Monitor with real-time data of currently broadcasting Senegalese radio stations.
+- **API Security Tools:** Include API key management and rate limiting to control and protect access to our API endpoints.
+
+These integrations boost functionality, enhance data accuracy, and improve security without having to build everything from scratch.
+
+## Security and Performance Considerations
+
+Securing user data and delivering high performance are critical components of SODAV Monitor:
+
+- **Authentication System:** Implemented with Supabase and Next.js, this system restricts access to sensitive administrative features via secure logins and role-based access control.
+- **Data Protection:** Sensitive data stored in Supabase is safeguarded with industry-standard encryption and indexing practices that boost both security and query performance.
+- **API Security:** With API key management, rate limiting, and role-based access control, the system ensures that only authorized access is permitted, reducing the risk of unauthorized data exposure.
+- **Performance Optimizations:** Optimized query performance through indexing on ISRC and audio fingerprint fields and caching repeated API requests enhances overall response time. Furthermore, the use of a responsive design and real-time updates ensures a smooth user experience on both desktop and mobile devices.
+
+These measures help maintain the integrity of sensitive data while ensuring that users enjoy a fast and reliable service.
+
+## Conclusion and Overall Tech Stack Summary
+
+In summary, SODAV Monitor employs a comprehensive tech stack that aligns perfectly with the project's goals to provide a real-time, reliable music broadcasting monitoring solution. Here are some of the standout aspects:
+
+- **User-Friendly Frontend:** Combining Next.js, TypeScript, Tailwind CSS, and Shadcn provides an interactive and responsive interface that enhances user engagement and ensures consistent design.
+- **Robust Backend:** Supabase (backed by PostgreSQL), RESTful API, and layered music recognition tools (Acoustid and Audd) work together to ensure accurate data capture and management.
+- **Scalable Infrastructure:** Thoughtful choices in hosting, deployment processes, and version control ensure the application is quick to update, reliable, and capable of growth.
+- **Enhanced Security:** With strong authentication, API security, and data protection methods in place, the system guards against unauthorized access and maintains high performance.
+- **Third-Party Integrations:** Services like RadioBrowser API and integrated music recognition applications improve the overall accuracy and functionality of the monitoring process.
+
+Overall, the SODAV Monitor tech stack is carefully chosen not only to meet today’s requirements but also to grow as new features are added. This thoughtful combination of technologies creates a powerful, secure, and user-friendly monitoring tool for managing music airplay and ensuring transparent copyright management.

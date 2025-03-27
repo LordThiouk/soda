@@ -1,0 +1,135 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# SODAV Monitor Project Requirements Document
+
+## 1. Project Overview
+
+SODAV Monitor is a music broadcasting monitoring solution built specifically for radio stations. Its main goal is to accurately detect and log the precise playtime of songs as they are aired, which provides critical data for transparent copyright management. By integrating advanced music recognition tools and APIs, SODAV Monitor automates the validation of airplay, ensuring that every broadcast is accounted for and credited appropriately.
+
+The solution is being built to address the challenges associated with manual tracking and discrepancies in music copyright management. With a focus on real-time monitoring and interactive data presentation, key objectives include providing a reliable dashboard with up-to-date statistics, high-accuracy song identification using layered verification (local fingerprint matching with Acoustid and Audd as fallback), and secure, role-based access for copyright managers. Success will be measured by the accuracy of detection, responsiveness of the dashboard, and ease of manual adjustments when needed.
+
+## 2. In-Scope vs. Out-of-Scope
+
+**In-Scope:**
+
+*   Automatic detection of songs broadcast over radio stations using audio fingerprinting coupled with Acoustid and Audd backups.
+*   Detailed logging of playtime with precise timestamps.
+*   Extraction, caching, and storage of audio fingerprints and ISRC codes.
+*   Integration with the RadioBrowser API to retrieve active Senegalese radio stations.
+*   A web-based, responsive interactive dashboard built with Next.js, showcasing real-time statistics, interactive charts, and drill-down analytics.
+*   Detailed analytics pages that offer filters (by time range, station, genre) along with trend and comparison charts.
+*   A reports section for comprehensive playback metrics.
+*   Authentication system leveraging Supabase’s authentication to secure access and enforce role-based controls.
+*   API endpoints for data capture and report retrieval with robust API key management and rate limiting.
+
+**Out-of-Scope:**
+
+*   Development of a dedicated mobile application; while the web interface will be mobile-optimized, a separate mobile app is not planned.
+*   Integration with any payment or subscription systems as the service will remain free.
+*   Additional music recognition services beyond Acoustid and Audd for this version.
+*   Extensive branding customizations beyond the modern, blue-grey color palette and use of clean fonts like 'Inter' provided by Tailwind CSS and Shadcn components.
+*   Non-essential, non-real-time batch updates; the focus is on real-time data delivery.
+
+## 3. User Flow
+
+When a copyright manager visits the SODAV Monitor website, they first see a clean, modern landing page that outlines the tool’s capabilities. From here, they move to a secure login screen where they enter their credentials. The authentication mechanism, built with Next.js and powered by Supabase, verifies their identity and assigns role-based permissions. Once logged in, they are directed to a central dashboard that displays up-to-date airplay statistics from various radio stations.
+
+On the dashboard, users view interactive elements such as charts and detailed metrics including play counts, timestamps, and trend analyses. They can explore further by navigating to detailed analytics pages for each station, which allow filtering by time range, genre, or station, and offer drill-down capabilities for more granular data. Additionally, if a song is misidentified, users can easily access a manual adjustment interface to correct the details. This seamless journey ensures that copyright managers have immediate access to precise, actionable data for effective copyright oversight.
+
+## 4. Core Features
+
+*   **Real-Time Airplay Detection:**\
+    Automatic detection of songs as they air, with precise logging of playtime and timestamps.
+*   **Layered Music Recognition:**\
+    Starts with local audio fingerprint matching and uses Acoustid first, then falls back to Audd if needed.
+*   **Interactive Dashboard:**\
+    A web-based dashboard displaying real-time statistics, interactive charts, and visualizations in an intuitive format.
+*   **Detailed Analytics Pages:**\
+    Dedicated analytics sections with filtering (time range, station, genre) and drill-down capabilities for in-depth analysis.
+*   **Comprehensive Reporting:**\
+    Generation of detailed reports including play counts, durations, time stamps, track details (artist, album, ISRC codes), and station information.
+*   **Data Management & Optimization:**\
+    Integrates Supabase (PostgreSQL) with indexed fields and caching for efficient query performance and scalability.
+*   **Authentication & Role-Based Access:**\
+    Secure login system using Supabase authentication with role-based permissions ensuring that only authorized users (copyright managers) can access and manage data.
+*   **API Security:**\
+    RESTful API endpoints secured with API key management, rate limiting, and role-based access controls.
+*   **Manual Data Correction:**\
+    Functionality allowing users to manually adjust or override detected song information to correct any misidentifications.
+
+## 5. Tech Stack & Tools
+
+*   **Frontend:**
+
+    *   Next.js 14 (App Router) for building a dynamic, server-rendered web application.
+    *   TypeScript for improved code quality, reliability, and maintainability.
+    *   Tailwind CSS for rapid and responsive styling with a consistent design system.
+    *   Shadcn components to provide a cohesive set of pre-assembled, customizable UI elements.
+
+*   **Backend:**
+
+    *   Supabase (leveraging PostgreSQL) for secure and scalable database management.
+    *   RESTful API design for handling data capture from detection processes and report generation.
+
+*   **Music Recognition:**
+
+    *   Acoustid for primary music identification.
+    *   Audd as a secondary option if Acoustid does not yield a match.
+
+*   **Radio Data Integration:**
+
+    *   RadioBrowser API to fetch data on active Senegalese radio stations, ensuring that monitoring is efficient and focused.
+
+*   **Additional Tools:**
+
+    *   Cursor as an advanced IDE with real-time coding suggestions to streamline development.
+    *   Claude 3.7 Sonnet from Anthropic to assist with hybrid reasoning and problem-solving during coding sessions.
+
+## 6. Non-Functional Requirements
+
+*   **Performance:**
+
+    *   Real-time updates with minimal delay to ensure accurate airplay tracking.
+    *   Optimized load times through efficient indexing and caching mechanisms on Supabase.
+
+*   **Security:**
+
+    *   Secure authentication and role-based access controls using Supabase.
+    *   API endpoints secured with API key management and enforced rate limiting to prevent abuse.
+
+*   **Usability & Accessibility:**
+
+    *   Clean, modern, and intuitive UI design with a responsive layout to support both desktop and mobile viewing.
+    *   Easy navigation between the dashboard, analytics pages, and reports sections.
+
+*   **Compliance:**
+
+    *   Adherence to industry standards for data security and privacy to protect sensitive broadcast information.
+
+## 7. Constraints & Assumptions
+
+*   The application must rely on the availability and responsiveness of external APIs (Acoustid, Audd, RadioBrowser) and handle situations where these services may experience delays or downtime.
+*   It is assumed that Supabase, as well as the chosen tech stack (Next.js 14, TypeScript, Tailwind CSS, Shadcn), will meet all scalability and performance needs.
+*   Role-based access and API security depend on the correct implementation of Supabase authentication and associated libraries.
+*   The system is optimized only for currently broadcasting stations pulled from the RadioBrowser API and will not monitor inactive channels.
+*   The environmental assumption is that real-time data processing and display will not significantly lag even under peak loads, thanks to proper indexing and caching strategies.
+
+## 8. Known Issues & Potential Pitfalls
+
+*   **Reliance on External APIs:**\
+    There is a potential risk of delays or downtime with third-party services (Acoustid, Audd, RadioBrowser API). Consider implementing robust error handling, fallback strategies, and caching to mitigate these issues.
+*   **Real-Time Processing Overhead:**\
+    Processing real-time audio data and updating dashboards may create performance challenges. Use efficient data handling techniques and server-side optimization to ensure prompt response times.
+*   **Data Accuracy & Misidentification:**\
+    Despite layered music recognition, occasional misidentifications are possible. The system provides a manual correction feature, but continued monitoring and adjusting for false positives will be necessary.
+*   **Scalability of Supabase & PostgreSQL:**\
+    High volumes of airplay data may impact database performance. Optimizing queries, indexing critical fields (e.g., ISRC and fingerprints), and using caching can help alleviate potential performance bottlenecks.
+*   **Security Vulnerabilities:**\
+    As with any system integrating multiple APIs and handling sensitive data, there is a risk of security breaches. Implementing thorough API key management, regular security audits, and rate limiting should be a priority.
+
+This detailed PRD serves as the central reference point for all subsequent technical documents. Every aspect, from frontend to backend, analytics, and API security, has been included to leave no room for ambiguity, ensuring that future designs and implementations follow this comprehensive blueprint.

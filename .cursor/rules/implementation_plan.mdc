@@ -1,0 +1,84 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Implementation plan
+
+## Phase 1: Environment Setup
+
+1. Install Node.js v20.2.1 on your system since it is required for developing a Next.js 14 project (Project Overview, Tech Stack: Frontend).
+2. Verify the Node.js installation by running `node -v` in the terminal (Project Overview, Tech Stack: Frontend).
+3. Create a new repository for the project using the Cursor starter kit (Tools: Cursor), and clone it locally (Project Outline).
+4. Initialize a Next.js 14 project in the `/frontend` directory. NOTE: Explicitly install Next.js version 14 instead of the latest version, as required by the tech stack (Tech Stack: Frontend).
+5. Create a `/backend` directory for backend RESTful API code and related services (Project Overview, Tech Stack: Backend).
+6. Install and configure Supabase CLI to connect with the Supabase project (Tech Stack: Backend).
+7. **Validation**: Run `next --version` inside `/frontend` and `node -v` in the terminal to confirm correct versions are installed.
+
+## Phase 2: Frontend Development
+
+8. In the `/frontend/package.json`, ensure dependencies include Next.js 14, TypeScript, Tailwind CSS, and Shadcn. Configure these exact versions as specified (Tech Stack: Frontend).
+9. Set up Tailwind CSS by creating a `tailwind.config.js` file in the `/frontend` root and updating the CSS file (e.g., `globals.css`) accordingly (Tech Stack: Frontend).
+10. Configure Shadcn components by installing and importing them in the Next.js project (Tech Stack: Frontend).
+11. Create the Landing page at `/frontend/app/page.tsx` with navigation links to Login/Signup, styled using Tailwind CSS and using the blue-grey and Inter font for a modern, professional look (App Flow: Landing Page, Project Overview).
+12. Develop the Login page at `/frontend/app/login/page.tsx`, integrating authentication with Supabase (Project Outline: Authentication).
+13. Create a Supabase client in `/frontend/lib/supabaseClient.ts` to handle authentication and database interaction (Tech Stack: Backend, Project Outline: User Authentication).
+14. Build the Dashboard page at `/frontend/app/dashboard/page.tsx` that will display real-time airplay statistics and interactive charts using Shadcn components (App Flow: Dashboard, Project Outline: Real-Time Monitoring).
+15. Implement interactive filtering controls on the Dashboard for time range, station, and genre selection (Project Outline: Detailed Analytics, App Flow: Analytics Pages).
+16. Create a Reports page at `/frontend/app/reports/page.tsx` that will list comprehensive detailed analytics (Project Outline: Reports and Manual Verification).
+17. Develop a Settings page at `/frontend/app/settings/page.tsx` to handle account management and role-based adjustments (Project Outline: Settings and Account Management).
+18. Add error boundaries by creating `/frontend/components/ErrorBoundary.tsx` to catch and display frontend errors (Project Overview: Error Handling).
+19. **Validation**: Run the Next.js development server and manually navigate to each page (Landing, Login, Dashboard, Reports, Settings) to ensure they render correctly and that the responsive design works on both mobile and desktop devices (App Flow: Responsive Interface).
+
+## Phase 3: Backend Development
+
+20. In the `/backend` directory, create a SQL initialization file (`/backend/db/init.sql`) to set up PostgreSQL tables in Supabase for users, songs, play logs, and radio station data. Include indexing and caching setups as specified (Tech Stack: Backend, Project Outline: Data Analytics).
+21. Define tables for:
+    - Users (with role-based fields for copyright managers)
+    - Songs (storing details like artist, album, ISRC, etc.)
+    - Playlogs (to record song playtimes and related metadata)
+    - Stations (to record radio station information)
+   (Project Overview: Detailed Analytics, API Security)
+22. Develop a RESTful API endpoint `POST /api/v1/detect` in `/backend/api/detect.js` for real-time song detection and logging (Project Overview: Real-Time Song Detection).
+23. Create a GET endpoint `GET /api/v1/analytics` in `/backend/api/analytics.js` to retrieve detailed playtime statistics and analytics (App Flow: Detailed Analytics).
+24. In the `/backend/services` directory, add integration services:
+    - `/backend/services/acoustidService.js` for Acoustid integration
+    - `/backend/services/auddService.js` for Audd integration
+    These will perform layered music recognition (Project Overview: Layered Music Recognition).
+25. Develop an endpoint `/backend/api/radio.js` to integrate the RadioBrowser API and fetch radio station data (Project Overview: Radio Data).
+26. Create an API endpoint `POST /api/v1/adjust` in `/backend/api/adjust.js` to allow manual corrections of misidentified song data (Project Overview: Manual Data Correction).
+27. Implement API security measures by adding middleware for API key management and rate limiting in `/backend/middleware/auth.js` (Project Overview: API Security, Q&A: API Key Management).
+28. Add role-based access control (RBAC) in the backend by checking user roles (supplied via Supabase authentication) before processing sensitive requests (Project Overview: Role-based Access Control).
+29. Configure CORS in the backend to allow requests from the frontend domain, e.g., `http://localhost:3000`, in `/backend/middleware/cors.js` (App Flow: Authentication).
+30. **Validation**: Test each API endpoint using Postman or curl to ensure they return the expected 200 OK responses and correct data payloads.
+
+## Phase 4: Integration
+
+31. Connect the frontend Login page with the Supabase authentication by integrating the Supabase client in `/frontend/lib/supabaseClient.ts` and invoking its signIn/signUp methods (Project Outline: User Authentication).
+32. From the Dashboard and Reports pages, create an API service file `/frontend/services/api.ts` to wrap RESTful API calls to the backend endpoints (App Flow: Dashboard & Analytics).
+33. Integrate real-time functionality on the Dashboard by subscribing to Supabase realtime updates for the playlogs table (Project Overview: Real-Time Updates).
+34. Ensure secure data transmission by confirming that API key and rate limiting middleware are enforced, and debug any CORS issues between frontend and backend (Project Overview: API Security).
+35. **Validation**: Manually simulate a login, fetch dashboard data, and adjust a song record to verify that frontend requests are correctly reaching and interacting with the backend services.
+
+## Phase 5: Deployment
+
+36. Prepare production build configurations for the Next.js app by updating the build scripts in `/frontend/package.json` (App Flow: Deployment).
+37. Configure environment variables for Supabase (e.g., Supabase URL and public anon key) for both frontend and backend. Create a `.env.local` file in `/frontend` and a `.env` file in `/backend` (Tech Stack: Backend).
+38. Create a CI/CD configuration file (`.github/workflows/deploy.yml`) to automate deployments for both the frontend and backend (Deployment: CI/CD Integration).
+39. Deploy the frontend Next.js app to a hosting platform such as Vercel. Ensure that the project uses Next.js 14 as specified (Tech Stack: Frontend, App Flow: Deployment).
+40. Deploy the backend RESTful API. If using Supabase hosting for PostgreSQL and related functions, configure it according to Supabase best practices (Tech Stack: Backend).
+41. Set up API security environment variables (API keys, rate limiting thresholds) in the deployment dashboard for the backend (Project Overview: API Security).
+42. If using additional cloud resources (e.g., Supabase Edge Functions), configure them according to regional and account settings provided by Supabase (Tech Stack: Backend).
+43. **Validation**: Run end-to-end tests in the production environment (using tools like Cypress) to ensure that the authentication flow, dashboard real-time data, reports, and manual adjustments work as expected.
+
+## Additional Features and Final Checks
+
+44. Integrate interactive chart components from Shadcn into the Dashboard page for displaying live airplay statistics (Project Overview: Interactive Dashboard).
+45. Implement filtering logic within the Dashboard and Analytics pages to allow detailed exploration (App Flow: Detailed Analytics).
+46. Enhance user notifications and error handling in the frontend via toast notifications or modal dialogs (Project Overview: Error Handling).
+47. Implement comprehensive logging in the backend (e.g., error and activity logs) to facilitate debugging and monitoring (Project Overview: API Security).
+48. Optimize database performance by ensuring that indexing and caching mechanisms are active via initialization scripts in `/backend/db/init.sql` (Project Overview: Comprehensive Reporting).
+49. Update README files in both `/frontend` and `/backend` directories with detailed setup, development, and deployment instructions (Project Overview: Documentation).
+50. **Validation**: Perform a complete walkthrough of the application by simulating user workflows—login, real-time monitoring, data adjustment, and analytics filtering—ensuring that all parts meet the requirements summarized in the project details.

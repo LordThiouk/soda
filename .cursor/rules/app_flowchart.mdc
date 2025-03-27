@@ -1,0 +1,17 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+flowchart TD
+    A[Authentication - role based access] --> F[RESTful API: key management, rate limiting, RBAC]
+    F --> B[Dashboard - real time airplay stats]
+    F --> C[Detailed analytics pages]
+    B --> H[Comprehensive reporting]
+    C --> G[Manual data correction]
+    D[Audio fingerprinting: Acoustid primary, Audd backup] --> E[Supabase Database: PostgreSQL with caching and indexing]
+    I[Radio data integration: RadioBrowser API] --> E
+    E --> F
+    A --> B

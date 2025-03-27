@@ -1,0 +1,102 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Frontend Guideline Document
+
+This document outlines the key aspects of the frontend architecture for the SODAV Monitor project. It serves as a clear guide to understanding the structure, design principles, and technologies that drive our music broadcasting monitoring solution.
+
+## Frontend Architecture
+
+The SODAV Monitor frontend is built on Next.js 14 with the App Router, leveraging TypeScript for enhanced type safety and consistency. We use Tailwind CSS and Shadcn for styling and pre-made UI components so that our development is fast and maintainable.
+
+Key points:
+- We structure the application using the Next.js framework which supports server-side rendering and static site generation, ensuring high performance and SEO benefits.
+- The component-based architecture promotes reusability and maintainability, making it easier to update and scale the codebase over time.
+- The integration with modern libraries and frameworks ensures a smooth development experience and robust application performance.
+
+## Design Principles
+
+We adhere to a set of design principles to ensure the SODAV Monitor offers a professional and user-friendly experience:
+
+- **Usability:** The user interface is designed with ease-of-use in mind. Clear call-to-actions, intuitive navigation, and informative dashboards simplify the process for users who need real-time airplay data.
+- **Accessibility:** We strive to meet accessibility standards so that the platform is usable by people with various abilities. This includes proper contrast ratios, keyboard navigation, and screen reader compatibility.
+- **Responsiveness:** The design is fully responsive, working seamlessly across devices from desktops to mobile phones.
+- **Consistency:** Regular design language across the application helps maintain a professional, cohesive look that aligns with the branding goals.
+
+## Styling and Theming
+
+### Styling Approach
+
+For styling, we rely on Tailwind CSS, which offers utility-first classes to rapidly develop our UI components. Tailwind CSS is combined with predesigned and customizable Shadcn components to ensure uniformity and to accelerate development.
+
+We also follow modern styling approaches like glassmorphism and flat design elements, combined with material design influences to enhance usability while keeping the interface minimal and professional.
+
+### Theming
+
+The application’s theme is driven by a blue and grey color palette that aligns with our modern professional look:
+
+- **Primary Colors:** A range of blues (e.g., blue-500 to blue-700) for highlights, buttons, and interactive elements.
+- **Secondary Colors:** Various shades of grey (e.g., gray-100 to gray-800) for backgrounds, borders, and text.
+
+### Typography
+
+- **Font:** We use the Inter font for its clean and modern appearance, well-suited for readability and professional contexts.
+
+## Component Structure
+
+Our frontend is built around a component-based architecture. Components are categorized in a modular fashion:
+
+- **Layout Components:** Define the overall structure of pages (headers, footers, side navigation) and ensure consistency across different screens.
+- **UI Components:** Reusable pieces like buttons, cards, modals, and forms that are used throughout the application. These components are styled with Tailwind CSS and enhanced with Shadcn’s design system.
+- **Feature Components:** Specific to individual functionalities, such as the real-time airplay dashboard, detailed analytics, and manual song adjustment interfaces.
+
+This approach not only boosts reusability but also simplifies future enhancements and maintenance.
+
+## State Management
+
+The application’s state is managed to ensure a seamless and interactive user experience. We use built-in React state hooks along with the Context API for sharing global state where necessary. For more complex state logic, especially within real-time analytics and dynamic dashboard updates, we consider integrating tools like Redux if the need for a more rigorous state management strategy arises.
+
+Key aspects include:
+- Maintaining local component states to keep the UI responsive.
+- Using global contexts for application-wide data and configurations such as user authentication status and role-based permissions.
+
+## Routing and Navigation
+
+Using Next.js 14’s App Router, our routing system is built to handle dynamic navigation effortlessly. This includes:
+
+- **Declarative Routing:** Inspired by React Router principles, which provide clear navigation paths for users.
+- **Nested Routes:** Allows the creation of complex hierarchies such as dashboards with sub-pages for detailed analytics and manual data correction screens.
+- **Dynamic Segments:** Necessary for station-specific pages and detailed views, enhancing the user’s ability to drill down into the data.
+
+## Performance Optimization
+
+Performance and responsiveness are at the core of our frontend strategy. We implement several techniques to keep the application fast:
+
+- **Lazy Loading and Code Splitting:** Only load the components and resources when necessary to speed up initial page loads.
+- **Optimized Assets:** Using modern image formats and minified CSS/JS to reduce load times.
+- **Caching:** Leveraging browser and server-side caching strategies, especially for static assets and less dynamic content.
+- **Efficient Indexing:** Our use of Supabase (PostgreSQL) is mirrored on the frontend by optimally structuring data requests to minimize unnecessary network overhead.
+
+## Testing and Quality Assurance
+
+To maintain high code quality and a smooth user experience, we incorporate the following testing strategies:
+
+- **Unit Testing:** Components and functions undergo unit tests to ensure they work independently, using frameworks such as Jest.
+- **Integration Testing:** Testing interactions between multiple components to simulate user workflows and data flows.
+- **End-to-End Testing:** Automated testing using tools like Cypress to simulate real user scenarios from sign-in to dashboard interactions.
+
+These tests ensure the application not only works as expected in isolation but also maintains stability when integrated as a whole.
+
+## Conclusion and Overall Frontend Summary
+
+In summary, the SODAV Monitor frontend is designed with modern web practices to deliver a fast, reliable, and user-friendly experience. With Next.js 14, TypeScript, Tailwind CSS, and Shadcn, our architecture promotes scalability, maintainability, and ease of development.
+
+The design principles of usability, accessibility, and responsiveness are consistently applied to ensure that even non-technical users find the application intuitive and engaging. The styling approach—with a blue and grey palette, Inter font, and a mix of modern glassmorphism and flat design—creates a professional and cohesive look.
+
+The thoughtful division into reusable components, efficient state management, structured routing, and proactive performance optimizations highlights our commitment to quality and user satisfaction.
+
+This comprehensive setup ensures that the frontend not only meets the technical and design requirements but also aligns well with the core goal of precise and automated music play monitoring for copyright management. All in all, our frontend strategy is tailored to create a robust, scalable, and effective monitoring solution accessible to both technical and non-technical users.

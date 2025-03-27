@@ -1,0 +1,189 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# SODAV Monitor - Backend Structure Document
+
+This document outlines the backend setup for SODAV Monitor in plain language. It covers the overall architecture, database management, API designs, hosting, infrastructure, and the security measures we put in place to ensure smooth operations, high performance, and robust protection of sensitive data.
+
+## 1. Backend Architecture
+
+The backend is designed for both scalability and maintainability, keeping in mind the specific needs for music broadcasting monitoring. Important design points include:
+
+- **Core Technologies**:
+  - Supabase for data storage and authentication (leveraging PostgreSQL).
+  - RESTful APIs that facilitate communication between the frontend and backend.
+
+- **Design Patterns and Frameworks**:
+  - **Modular Architecture**: Functions are organized by feature (like song detection, airplay logging, manual overrides, etc.), ensuring that new features can be added or updated without disturbing the entire codebase.
+  - **Service Oriented**: With a clear separation between authentication services, music recognition integrations (Acoustid primary and Audd fallback), and analytics reporting.
+
+- **Scalability and Performance**:
+  - Real-time updates are supported by Supabase subscriptions, ensuring that data is fresh and the interactive dashboard remains responsive.
+  - Efficient data handling via caching and optimized queries (e.g., indexes on frequently queried fields such as ISRC and fingerprints) ensures smooth operation even under high loads.
+
+- **Maintainability**:
+  - Well-documented and modular code makes updates and troubleshooting easier.
+  - Role-based access control helps set clear boundaries on who can access or modify sensitive data.
+
+## 2. Database Management
+
+Data is at the heart of the SODAV Monitor project, and a PostgreSQL instance hosted by Supabase serves as the main database system. Key details include:
+
+- **Database Technologies**:
+  - **SQL Database**: PostgreSQL hosted on Supabase.
+
+- **Data Structure and Storage**:
+  - Data is organized into clearly defined tables that support logging song detections, play counts, user roles, and API keys.
+  - Structured storage for fingerprint data, track details (title, artist, album, ISRC), station information, and airplay logs.
+  - Data integrity is maintained through indexes on key fields (e.g., ISRC and fingerprint columns) and enforced relations to eliminate redundancy.
+
+- **Management Practices**:
+  - Routine indexing and caching of frequently requested queries help speed up performance.
+  - Regular database backups are scheduled via Supabase to ensure data recovery if needed.
+
+## 3. Database Schema
+
+The database schema for SODAV Monitor is designed to be clear and straightforward. Here is a human-readable overview along with an example for an SQL-based design:
+
+### Human-Readable Schema Overview
+
+- **Users Table**: Stores user details, role information, and authentication credentials.
+- **Songs Table**: Contains records of songs detected, including fields for title, artist, album, ISRC, and fingerprint data.
+- **Airplay Logs Table**: Records each play of a song including timestamps, station IDs, and play duration.
+- **Manual Overrides Table**: Captures corrections made to misidentified songs, linking back to the Songs Table.
+- **API Keys and Access Control Table**: Maintains data for API key management and enforces role-based access and rate limiting.
+
+### Example SQL Schema for PostgreSQL
+
+/* Users Table */
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL, -- e.g., 'admin', 'copyright_manager'
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+/* Songs Table */
+CREATE TABLE songs (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  artist VARCHAR(255) NOT NULL,
+  album VARCHAR(255),
+  isrc VARCHAR(50) UNIQUE,
+  fingerprint VARCHAR(255) UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+/* Airplay Logs Table */
+CREATE TABLE airplay_logs (
+  id SERIAL PRIMARY KEY,
+  song_id INTEGER REFERENCES songs(id),
+  station_id INTEGER, -- References station, if there is a separate station table
+  play_timestamp TIMESTAMP NOT NULL,
+  duration INTEGER, -- Duration in seconds
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+/* Manual Overrides Table */
+CREATE TABLE manual_overrides (
+  id SERIAL PRIMARY KEY,
+  airplay_log_id INTEGER REFERENCES airplay_logs(id),
+  corrected_song_id INTEGER REFERENCES songs(id),
+  override_reason TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+/* API Keys Table */
+CREATE TABLE api_keys (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  api_key VARCHAR(255) UNIQUE NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+## 4. API Design and Endpoints
+
+The communication between frontend and backend is facilitated via a RESTful API design. Key points include:
+
+- **API Structure**:
+  - Each endpoint is crafted to cater to specific functionalities such as song detection, playtime logging, manual overrides, and analytic report generation.
+  - The API design embraces resource-based URIs, making the system easy to expand as new features are added.
+
+- **Key Endpoints**:
+  - **Authentication Endpoints**: For user signup, login, and role verification using Supabase Auth.
+  - **Song Detection Endpoint**: Receives audio fingerprint data from the monitoring system, triggers Acoustid (or Audd for fallback) searches and returns identified song details.
+  - **Airplay Log Endpoint**: Logs every airplay event with necessary details including timestamps and station information.
+  - **Reporting Endpoint**: Provides access to detailed reports including play counts, trends, and station analytics
+  - **Manual Override Endpoint**: Lets authorized users submit corrections for misidentified songs.
+  - **API Key Management Endpoint**: Manages API key creation, activation, and renewal, ensuring tight control over who can access the APIs.
+
+- **Communication**:
+  - JSON is used for both requests and responses to ensure compatibility with modern web applications.
+
+## 5. Hosting Solutions
+
+The backend is hosted on cloud platforms, which offers numerous benefits in terms of reliability and scalability. Key details include:
+
+- **Primary Hosting Provider**: Supabase (leveraging cloud infrastructure for PostgreSQL and authentication).
+
+- **Benefits**:
+  - **Reliability**: Cloud-based hosting means high uptime and automatic failovers.
+  - **Scalability**: Easily scale resources up or down based on real-time demands, especially during peak broadcasting times.
+  - **Cost-effectiveness**: Pay-as-you-go models and resource efficiency help keep costs predictable and controlled.
+
+## 6. Infrastructure Components
+
+Several infrastructure components have been put in place to ensure optimal performance and a seamless user experience:
+
+- **Load Balancers**: Evenly distribute incoming requests among available resources to prevent any one server from becoming overloaded.
+- **Caching Mechanisms**: Frequently accessed API queries and reports are cached to speed up response times and minimize load on the database.
+- **Content Delivery Networks (CDNs)**: While primarily used for SERVING static assets for the frontend, they also indirectly benefit backend performance by reducing latency.
+- **Real-Time Notification Systems**: Utilized via Supabase subscriptions, ensuring that clients receive live updates for the monitoring dashboard.
+
+## 7. Security Measures
+
+With restricted and sensitive data, security is paramount. Several layers of protection are in place:
+
+- **Authentication & Authorization**:
+  - Supabase Auth handles user authentication with role-based access control (RBAC) to prevent unauthorized access to sensitive data.
+  - API endpoints are secured by requiring valid API keys and user tokens.
+
+- **Data Encryption**:
+  - All sensitive data, both in transit and at rest, is encrypted using industry-standard protocols.
+
+- **API Security**:
+  - Endpoints are protected through API key management.
+  - Rate limiting is enforced to prevent abuse or brute-force attacks.
+
+- **Additional Measures**:
+  - Regular security audits and vulnerability assessments ensure that the backend remains robust against threats.
+
+## 8. Monitoring and Maintenance
+
+Continuous monitoring keeps the backend healthy and responsive:
+
+- **Monitoring Tools**:
+  - Built-in Supabase monitoring to track performance metrics, query speeds, and real-time logs.
+  - Additional third-party tools may be integrated for holistic monitoring of server health and performance metrics.
+
+- **Maintenance Strategies**:
+  - Regular server and database updates to apply security patches and performance improvements.
+  - Scheduled backups and routine integrity checks on data and indices.
+  - A dedicated support and maintenance schedule ensures that any issues are resolved promptly and that the infrastructure scales with usage demands.
+
+## 9. Conclusion and Overall Backend Summary
+
+The SODAV Monitor backend is meticulously designed to support its core functionalities, ensuring high performance, real-time updates, robust security, and seamless integration with the frontend and third-party services. In summary:
+
+- A modular and service-oriented architecture using Supabase and PostgreSQL supports all critical operations from automatic detection to detailed analytics.
+- The structured SQL schema organizes data efficiently, while RESTful endpoints provide easy and secure access to this data.
+- Cloud hosting with Supabase, combined with load balancing, caching, and CDNs, ensures a scalable, reliable, and cost-effective backend.
+- State-of-the-art security measures including RBAC, encrypted communications, and API key management protect sensitive data effectively.
+
+This backend structure not only meets the current needs of SODAV Monitor but is built to adapt and scale as new features and higher demands arise, ensuring ongoing reliability and performance for all users.

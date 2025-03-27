@@ -1,0 +1,102 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+## Project Overview
+
+*   **Type:** Music Broadcasting Monitoring Solution
+*   **Description:** SODAV Monitor is a music broadcasting monitoring solution for radio stations focused on transparent copyright management. It automatically detects and logs songs played on radio, records precise playtimes with timestamps, extracts audio fingerprints, retrieves and stores ISRC codes, and generates detailed airplay reports.
+*   **Primary Goal:** To deliver an end-to-end system that ensures real-time logging, accurate data tracking, and comprehensive reporting for copyright managers, while enabling manual adjustments and secure API access.
+
+## Project Structure
+
+### Framework-Specific Routing
+
+*   **Directory Rules:**
+
+    *   `Next.js 14 (App Router)`: Utilize the `app/` directory with nested route folders to align with Next.js 14 conventions.
+    *   Example 1: "Next.js 14 (App Router)" → `app/[route]/page.tsx` conventions
+    *   Example 2: "Next.js (Pages Router)" → *Not applicable as the project mandates App Router usage*
+    *   Example 3: "React Router 6" → *N/A - Not in the current tech stack*
+
+### Core Directories
+
+*   **Versioned Structure:**
+
+    *   `app/api`: Next.js 14 API routes using Route Handlers for RESTful implementations, particularly for Supabase interactions and external API integrations (Acoustid, Audd, RadioBrowser).
+    *   `app/dashboard`: Dedicated area for interactive dashboards and analytics pages for each radio station.
+    *   `app/auth`: Contains authentication and role-based access control pages, supporting API key management and user access protocols.
+
+### Key Files
+
+*   **Stack-Versioned Patterns:**
+
+    *   `app/dashboard/layout.tsx`: Implements the root layout for all dashboard-related pages, ensuring consistency with Next.js 14 App Router patterns.
+    *   `app/api/[...].ts`: API route implementations for data retrieval and report generation.
+    *   `app/auth/login/page.tsx`: Login page leveraging server actions for secure authentication processes.
+
+## Tech Stack Rules
+
+*   **Version Enforcement:**
+
+    *   `next@14`: Enforce the use of Next.js 14 App Router, ensuring that all routing is managed within the `app/` directory. No legacy `getInitialProps` or `pages/` folder should be used.
+    *   `typescript@latest`: Maintain strict type-checking and utilize TypeScript best practices throughout the project.
+    *   `tailwindcss@latest`: Follow Tailwind CSS configuration best practices for responsive design, especially given the requirement for a mobile-accessible web interface.
+
+## PRD Compliance
+
+*   **Non-Negotiable:**
+
+    *   "Real-time updates are crucial for accurate, timely monitoring." → Implementation must support real-time data synchronization and event handling.
+    *   "Detailed airplay reports and comprehensive analytics are essential." → UI/UX must exhibit robust interactive dashboards with drill-down and filtering capabilities.
+    *   "API Security with key management, rate limiting, and RBAC." → Backend implementations must adhere to strict security practices.
+
+## App Flow Integration
+
+*   **Stack-Aligned Flow:**
+
+    *   Next.js 14 Auth Flow → `app/auth/login/page.tsx` uses server actions for secure login and role-based access control.
+    *   Dashboard Integration → `app/dashboard` routes provide interactive charting and real-time monitoring capabilities, interfacing directly with Supabase data APIs.
+
+## Best Practices
+
+*   **Next.js 14**
+
+    *   Use the App Router (`app/` directory) exclusively; avoid mixing with classic Pages Router structures.
+    *   Leverage server components and actions for improved performance and security.
+    *   Optimize routing structures by separating concerns: API routes, authentication, and dashboard features into clear, dedicated directories.
+
+*   **TypeScript**
+
+    *   Enforce strict type-checking and interface definitions to avoid runtime errors.
+    *   Utilize advanced TypeScript features for maintainability and clarity in code-base documentation.
+    *   Integrate linting and formatting tools to maintain code quality.
+
+*   **Tailwind CSS**
+
+    *   Adhere to a utility-first methodology to maintain consistency and reduce custom CSS overhead.
+    *   Configure responsive breakpoints carefully to ensure mobile accessibility.
+    *   Use Tailwind plugins where necessary for extending base functionality without bloating the code.
+
+*   **Supabase (PostgreSQL)**
+
+    *   Set up necessary indexing on ISRC and fingerprint fields to improve query performance.
+    *   Utilize caching strategies to minimize repeated API queries and reduce load times.
+    *   Follow best practices for role-based access control and secure data handling.
+
+*   **API Integration (Acoustid, Audd, RadioBrowser)**
+
+    *   Establish clear fallback mechanisms (e.g., primary call to Acoustid, fallback to Audd) to ensure reliability.
+    *   Implement robust error handling and rate limiting for external API calls.
+    *   Keep API keys secure and use environment variables for configuration.
+
+## Rules
+
+*   Derive folder/file patterns directly from techStackDoc versions.
+*   If Next.js 14 App Router: Enforce `app/` directory with nested route folders.
+*   If Pages Router: *Not applicable as the project mandates App Router usage.*
+*   Mirror this logic for React Router, SvelteKit, etc., if added in future projects.
+*   Never mix version patterns (e.g., no `pages/` in App Router projects).
