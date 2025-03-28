@@ -1,5 +1,5 @@
 const apiKeyService = require('../services/apiKey.service');
-const { catchAsync } = require('../utils/catchAsync');
+const catchAsync = require('../utils/catchAsync');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 

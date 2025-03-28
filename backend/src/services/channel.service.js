@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { supabase, executeSupabaseQuery } = require('../utils/supabase');
+const { supabase, executeSupabaseQuery } = require('../config/supabase');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 

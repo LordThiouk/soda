@@ -38,6 +38,52 @@ export interface DetectionFilter {
   limit?: number;
 }
 
+// Types pour les sessions de surveillance
+export interface MonitoringSession {
+  id: string;
+  channel_id: string;
+  interval_seconds: number;
+  callback_url?: string;
+  status: 'active' | 'stopped' | 'failed';
+  status_reason?: string;
+  started_at: string;
+  ended_at?: string;
+  last_detection_at?: string;
+  detection_count: number;
+  created_at: string;
+  channel?: {
+    id: string;
+    name: string;
+    type: 'radio' | 'tv';
+    url: string;
+    logo_url?: string;
+  };
+}
+
+export interface MonitoringSessionDetection {
+  id: string;
+  detection_id: string;
+  detected_at: string;
+  song?: {
+    title: string;
+    artist: string;
+    album?: string;
+    isrc?: string;
+  };
+}
+
+export interface MonitoringError {
+  id: string;
+  error_message: string;
+  occurred_at: string;
+}
+
+export interface MonitoringSessionDetails {
+  session: MonitoringSession;
+  detections: MonitoringSessionDetection[];
+  errors: MonitoringError[];
+}
+
 class DetectionService {
   /**
    * Récupérer la liste des détections récentes
@@ -108,6 +154,51 @@ class DetectionService {
       .subscribe();
     */
     // Pour l'instant, retournons une fonction de nettoyage vide
+    return () => {};
+  }
+
+  /**
+   * Démarrer une session de surveillance en temps réel
+   * @param channel_id ID de la chaîne à surveiller
+   * @param options Options de la session (intervalle, URL de callback)
+   */
+  async startMonitoringSession(
+    channel_id: string, 
+    options: { interval_seconds?: number; callback_url?: string } = {}
+  ): Promise<MonitoringSession> {
+    return await apiService.post(`/detection/realtime/${channel_id}/start`, options);
+  }
+
+  /**
+   * Arrêter une session de surveillance en temps réel
+   * @param channel_id ID de la chaîne à arrêter
+   * @param reason Raison de l'arrêt (optionnel)
+   */
+  async stopMonitoringSession(channel_id: string, reason?: string): Promise<MonitoringSession> {
+    return await apiService.post(`/detection/realtime/${channel_id}/stop`, { reason });
+  }
+
+  /**
+   * Récupérer toutes les sessions de surveillance actives
+   */
+  async getActiveMonitoringSessions(): Promise<MonitoringSession[]> {
+    return await apiService.get('/detection/realtime/sessions');
+  }
+
+  /**
+   * Récupérer les détails d'une session de surveillance
+   * @param session_id ID de la session
+   */
+  async getMonitoringSessionDetails(session_id: string): Promise<MonitoringSessionDetails> {
+    return await apiService.get(`/detection/realtime/sessions/${session_id}`);
+  }
+
+  /**
+   * S'abonner aux mises à jour des sessions de surveillance (via Supabase)
+   * @param callback Fonction de callback à appeler lorsqu'une session est mise à jour
+   */
+  subscribeToMonitoringSessions(callback: (session: MonitoringSession) => void) {
+    // Implémentation similaire à subscribeToRealTimeDetections
     return () => {};
   }
 }

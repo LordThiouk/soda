@@ -1,10 +1,11 @@
 const detectionService = require('../services/detection.service');
-const { catchAsync } = require('../middlewares/errorHandler');
+const songService = require('../services/song.service');
+const catchAsync = require('../utils/catchAsync');
+const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { AppError } = require('../middlewares/errorHandler');
 
 // Configuration de Multer pour le stockage temporaire des fichiers audio
 const storage = multer.diskStorage({
@@ -206,13 +207,15 @@ const detectionController = {
    */
   stopRealTimeDetection: catchAsync(async (req, res) => {
     const { channel_id } = req.params;
+    const { reason } = req.body;
     
     if (!channel_id) {
       throw new AppError('Le paramètre channel_id est requis', 400);
     }
     
     const result = await detectionService.stopRealTimeDetection(
-      parseInt(channel_id, 10)
+      parseInt(channel_id, 10),
+      reason || 'Arrêt manuel demandé par l\'utilisateur'
     );
     
     res.status(200).json(result);

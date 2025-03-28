@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Radio, Tv, MoreVertical, Wifi, Check, X } from "lucide-react";
+import { Search, Plus, Radio, Tv, MoreVertical, Wifi, Check, X, Play, StopCircle, AlertTriangle, Clock } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -25,6 +25,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { toast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import detectionService, { MonitoringSession } from "@/services/detectionService";
+import stationService from "@/services/stationService";
 
 // Simuler des données de stations pour le moment
 // À remplacer par des appels API réels
@@ -44,9 +51,46 @@ const mockTVStations = [
 export default function StationsPage() {
   const [searchValue, setSearchValue] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [stations, setStations] = useState([...mockRadioStations, ...mockTVStations]);
+  const [monitoringSessions, setMonitoringSessions] = useState<MonitoringSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [intervalValue, setIntervalValue] = useState(60);
+  const [selectedStation, setSelectedStation] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  const [isStoppingSession, setIsStoppingSession] = useState(false);
+  
+  // Charger les sessions de surveillance actives
+  useEffect(() => {
+    const fetchMonitoringSessions = async () => {
+      setIsLoadingSessions(true);
+      try {
+        const sessions = await detectionService.getActiveMonitoringSessions();
+        setMonitoringSessions(sessions);
+      } catch (error) {
+        console.error("Erreur lors du chargement des sessions de surveillance:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les sessions de surveillance",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+    
+    fetchMonitoringSessions();
+    
+    // Mise en place d'un interval pour rafraîchir les sessions toutes les 30 secondes
+    const refreshInterval = setInterval(fetchMonitoringSessions, 30000);
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, []);
   
   // Filtrer les stations en fonction du terme de recherche et de l'onglet actif
-  const filteredStations = [...mockRadioStations, ...mockTVStations].filter(station => {
+  const filteredStations = stations.filter(station => {
     const matchesSearch = station.name.toLowerCase().includes(searchValue.toLowerCase()) ||
                          station.url.toLowerCase().includes(searchValue.toLowerCase());
     
@@ -55,6 +99,10 @@ export default function StationsPage() {
     if (activeTab === "tv") return matchesSearch && station.type === "tv";
     if (activeTab === "active") return matchesSearch && station.status === "active";
     if (activeTab === "inactive") return matchesSearch && station.status === "inactive";
+    if (activeTab === "monitoring") {
+      const sessionIds = monitoringSessions.map(session => session.channel_id);
+      return matchesSearch && sessionIds.includes(station.id.toString());
+    }
     
     return matchesSearch;
   });
@@ -69,6 +117,81 @@ export default function StationsPage() {
   const handleTestStation = (stationId: number) => {
     // Normalement, cela déclencherait un appel API
     alert(`Test de la station ${stationId} en cours...`);
+  };
+  
+  // Démarrer une session de surveillance
+  const handleStartMonitoring = async () => {
+    if (!selectedStation) return;
+    
+    setIsStartingSession(true);
+    try {
+      const result = await detectionService.startMonitoringSession(
+        selectedStation.id.toString(),
+        { interval_seconds: intervalValue }
+      );
+      
+      setMonitoringSessions(prev => [...prev, result]);
+      
+      toast({
+        title: "Succès",
+        description: `Surveillance de ${selectedStation.name} démarrée avec succès`,
+      });
+      
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Erreur lors du démarrage de la surveillance:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de démarrer la surveillance",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingSession(false);
+    }
+  };
+  
+  // Arrêter une session de surveillance
+  const handleStopMonitoring = async (stationId: number) => {
+    setIsStoppingSession(true);
+    try {
+      await detectionService.stopMonitoringSession(
+        stationId.toString(),
+        "Arrêt manuel depuis l'interface"
+      );
+      
+      // Retirer la session de la liste
+      setMonitoringSessions(prev => 
+        prev.filter(session => session.channel_id !== stationId.toString())
+      );
+      
+      toast({
+        title: "Succès",
+        description: "Surveillance arrêtée avec succès",
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'arrêt de la surveillance:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'arrêter la surveillance",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStoppingSession(false);
+    }
+  };
+  
+  // Vérifier si une station est en cours de surveillance
+  const isMonitoring = (stationId: number) => {
+    return monitoringSessions.some(
+      session => session.channel_id === stationId.toString() && session.status === 'active'
+    );
+  };
+  
+  // Obtenir la session de surveillance d'une station
+  const getMonitoringSession = (stationId: number) => {
+    return monitoringSessions.find(
+      session => session.channel_id === stationId.toString()
+    );
   };
 
   return (
@@ -98,7 +221,7 @@ export default function StationsPage() {
       </div>
 
       <Tabs defaultValue="all" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="all">Toutes</TabsTrigger>
           <TabsTrigger value="radio" className="flex items-center">
             <Radio className="mr-2 h-4 w-4" />
@@ -115,6 +238,10 @@ export default function StationsPage() {
           <TabsTrigger value="inactive" className="flex items-center">
             <X className="mr-2 h-4 w-4" />
             Inactives
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center">
+            <Play className="mr-2 h-4 w-4" />
+            En surveillance
           </TabsTrigger>
         </TabsList>
 
@@ -136,6 +263,7 @@ export default function StationsPage() {
                       <TableHead>URL</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Qualité</TableHead>
+                      <TableHead>Surveillance</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -177,6 +305,30 @@ export default function StationsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {isMonitoring(station.id) ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="bg-blue-100 text-blue-800 cursor-help">
+                                    <Play className="mr-1 h-3 w-3" />
+                                    En cours
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Intervalle: {getMonitoringSession(station.id)?.interval_seconds}s</p>
+                                  <p>Détections: {getMonitoringSession(station.id)?.detection_count}</p>
+                                  <p>Démarré le: {new Date(getMonitoringSession(station.id)?.started_at || "").toLocaleString()}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge variant="outline" className="text-gray-500">
+                              <StopCircle className="mr-1 h-3 w-3" />
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -189,6 +341,28 @@ export default function StationsPage() {
                                 Tester
                               </DropdownMenuItem>
                               <DropdownMenuItem>Modifier</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {isMonitoring(station.id) ? (
+                                <DropdownMenuItem 
+                                  onClick={() => handleStopMonitoring(station.id)}
+                                  disabled={isStoppingSession}
+                                  className="text-red-600"
+                                >
+                                  <StopCircle className="mr-2 h-4 w-4" />
+                                  Arrêter la surveillance
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setSelectedStation(station);
+                                    setIsDialogOpen(true);
+                                  }}
+                                  disabled={station.status !== "active"}
+                                >
+                                  <Play className="mr-2 h-4 w-4" />
+                                  Démarrer la surveillance
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-red-600">
                                 Supprimer
@@ -204,12 +378,83 @@ export default function StationsPage() {
             </CardContent>
             <CardFooter className="flex justify-between">
               <div className="text-sm text-muted-foreground">
-                Utilisez le menu déroulant pour gérer les stations
+                {monitoringSessions.length > 0 ? 
+                  `${monitoringSessions.length} sessions de surveillance actives` : 
+                  "Aucune session de surveillance active"}
               </div>
+              {monitoringSessions.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setActiveTab("monitoring")}>
+                  <Play className="mr-2 h-4 w-4" />
+                  Voir les sessions actives
+                </Button>
+              )}
             </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Dialog pour configurer une nouvelle session de surveillance */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Démarrer la surveillance en temps réel</DialogTitle>
+            <DialogDescription>
+              Configurez la fréquence de surveillance pour {selectedStation?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="interval">
+                Intervalle de détection (secondes)
+              </Label>
+              <div className="flex items-center space-x-4">
+                <Slider
+                  id="interval"
+                  min={30}
+                  max={300}
+                  step={30}
+                  value={[intervalValue]}
+                  onValueChange={(value) => setIntervalValue(value[0])}
+                />
+                <span className="w-12 text-center font-medium">
+                  {intervalValue}s
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                L'intervalle recommandé est entre 60 et 120 secondes pour une détection optimale.
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2 rounded-md border p-4">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <div className="ml-2 text-sm text-muted-foreground">
+                La surveillance en temps réel consomme des ressources système. Nous vous recommandons
+                de limiter le nombre de sessions actives simultanées.
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleStartMonitoring} disabled={isStartingSession}>
+              {isStartingSession ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4 animate-spin" />
+                  Démarrage...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Démarrer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -1,9 +1,8 @@
 const express = require('express');
 const songController = require('../controllers/song.controller');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
-const { hasRole } = require('../middlewares/roleMiddleware');
-const { validate } = require('../middlewares/validationMiddleware');
-const { schemas } = require('../validations/schemas');
+const isAuthenticated = require('../middlewares/isAuthenticated');
+const hasRole = require('../middlewares/hasRole');
+const { validate, schemas } = require('../validations');
 
 const router = express.Router();
 

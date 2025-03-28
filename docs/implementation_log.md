@@ -153,6 +153,85 @@
    - Format standardisé pour les statistiques de surveillance
    - Support pour la pagination et le filtrage des résultats
 
+## 30 mars 2025, 09:00 - 15:30 : Amélioration de la détection en temps réel (Phase 4)
+
+### Tâches accomplies :
+
+1. **Implémentation de la capture audio réelle**
+   - Intégration de FFmpeg pour la capture d'échantillons audio de 30 secondes
+   - Conversion en base64 pour l'identification via les services Acoustid et Audd
+   - Gestion robuste des erreurs et des cas particuliers
+   - Optimisation de la qualité des échantillons (bitrate, format, durée)
+
+2. **Persistance des sessions de surveillance**
+   - Restauration automatique des sessions actives au démarrage du serveur
+   - Synchronisation des états entre la mémoire et la base de données
+   - Récupération des paramètres de détection (intervalles, URL de callback)
+   - Traçabilité des arrêts de session avec la nouvelle colonne status_reason
+
+3. **Système de gestion des ressources**
+   - Surveillance périodique de l'utilisation CPU et mémoire
+   - Configuration paramétrable des limites de ressources via variables d'environnement
+   - Mécanisme adaptatif de réduction de charge en cas de surcharge système
+   - Arrêt sélectif et progressif des sessions les moins actives
+
+4. **Architecture avancée avec file d'attente**
+   - Implémentation d'un système de file d'attente pour les tâches de détection
+   - Traitement asynchrone pour éviter les blocages et les timeouts
+   - Mécanisme de back-off exponentiel pour les chaînes problématiques (2^n secondes)
+   - Gestion optimisée des échecs avec tentatives espacées intelligemment
+
+### Défis surmontés :
+
+1. **Gestion efficace des ressources**
+   - Mise en place d'un système de surveillance des ressources système en temps réel
+   - Création d'un algorithme adaptatif pour équilibrer la charge selon les capacités du serveur
+   - Optimisation de l'utilisation mémoire pour éviter les fuites
+
+2. **Fiabilité du système de détection**
+   - Implémentation d'un mécanisme de back-off exponentiel pour les chaînes instables
+   - Traitement intelligent des erreurs selon leur nature et leur fréquence
+   - Journalisation approfondie pour faciliter le diagnostic des problèmes
+
+3. **Concurrence et synchronisation**
+   - Résolution des problèmes de concurrence dans le traitement des détections
+   - Création d'un système de file d'attente asynchrone et non bloquant
+   - Prévention des conditions de course dans les mises à jour d'état des sessions
+
+### Améliorations apportées :
+
+1. **Architecture évolutive**
+   - Système de file d'attente qui facilite l'ajout de nouveaux types de traitement
+   - Séparation claire des responsabilités entre capture, détection et gestion des erreurs
+   - Structure modulaire pour faciliter les extensions futures
+
+2. **Fiabilité et résilience**
+   - Restauration automatique après redémarrage du serveur
+   - Tolérance aux pannes avec gestion intelligente des échecs
+   - Traçabilité complète des opérations et des erreurs
+
+3. **Optimisation des performances**
+   - Paramètres d'échantillonnage audio optimisés pour l'identification
+   - Utilisation efficace des ressources système
+   - Priorisation dynamique des tâches de détection
+
+### Prochaines étapes :
+
+1. **Finalisation de l'intégration frontend**
+   - Implémentation des vues en temps réel pour la surveillance des sessions
+   - Création d'interfaces pour la gestion des sessions (démarrage, arrêt, configuration)
+   - Visualisation des statistiques de détection en temps réel
+
+2. **Tests et validation**
+   - Tests de charge pour évaluer les performances sous forte sollicitation
+   - Validation du comportement du système sous différentes conditions
+   - Optimisation fine des paramètres de configuration
+
+3. **Documentation**
+   - Mise à jour complète de la documentation technique
+   - Création de guides utilisateur pour la gestion des sessions de surveillance
+   - Documentation des API pour l'intégration avec des systèmes externes
+
 ## 17/05/2023 - Phase 4 : Visualisations graphiques
 
 - Implémentation des composants de graphiques réutilisables avec Recharts :

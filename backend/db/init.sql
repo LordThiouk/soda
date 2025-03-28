@@ -139,6 +139,7 @@ CREATE TABLE public.monitoring_sessions (
   interval_seconds INTEGER NOT NULL DEFAULT 60,
   callback_url TEXT,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'stopped', 'failed')),
+  status_reason TEXT, -- Raison du changement de statut
   started_at TIMESTAMP WITH TIME ZONE NOT NULL,
   ended_at TIMESTAMP WITH TIME ZONE,
   last_detection_at TIMESTAMP WITH TIME ZONE,

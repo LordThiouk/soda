@@ -1,9 +1,9 @@
 const express = require('express');
 const apiKeyController = require('../controllers/apiKey.controller');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
-const { validate } = require('../middlewares/validationMiddleware');
-const { schemas } = require('../validations/schemas');
-const { checkApiKey } = require('../middlewares/apiKeyMiddleware');
+const isAuthenticated = require('../middlewares/isAuthenticated');
+const hasRole = require('../middlewares/hasRole');
+const checkApiKey = require('../middlewares/apiKeyMiddleware');
+const { validate, schemas } = require('../validations');
 
 const router = express.Router();
 

@@ -1,7 +1,8 @@
 const express = require('express');
 const channelController = require('../controllers/channel.controller');
-const { isAuthenticated, hasRole } = require('../middlewares/auth');
-const { validate, schemas } = require('../utils/validator');
+const isAuthenticated = require('../middlewares/isAuthenticated');
+const hasRole = require('../middlewares/hasRole');
+const { validate, schemas } = require('../validations');
 
 const router = express.Router();
 

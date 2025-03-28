@@ -106,7 +106,7 @@ class ReportService {
    * @param id ID du rapport
    */
   downloadReport(id: string): void {
-    const url = apiService.getFullUrl(`/reports/${id}/download`);
+    const url = apiService.constructor.getFullUrl(`/reports/${id}/download`);
     window.open(url, '_blank');
   }
 

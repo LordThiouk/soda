@@ -40,7 +40,11 @@ Ce document décrit les phases de développement prévues et leur avancement pou
   - ✅ Création des composants de graphiques réutilisables (PieChart, BarChart, LineChart, AreaChart)
   - ✅ Intégration des visualisations dans le tableau de bord
   - ✅ Implémentation de la page d'analyse avec filtres et visualisations multiples
-- 🔄 Mise en place de la détection en temps réel
+- ✅ Mise en place de la détection en temps réel
+  - ✅ Capture audio réelle avec FFmpeg
+  - ✅ Système de file d'attente et back-off exponentiel
+  - ✅ Gestion avancée des ressources système
+  - ✅ Persistance et restauration automatique des sessions
 - 🔄 Configuration des souscriptions temps réel avec Supabase
 - ⬜ Implémentation des notifications
 - ⬜ Fonctionnalités avancées de rapport

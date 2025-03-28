@@ -36,7 +36,7 @@ const validateISRC = (isrc) => {
  * @returns {string} Code ISRC normalisé
  */
 const normalizeISRC = (isrc) => {
-  if (!isrc) return null;
+  if (!isrc) return '';
   return isrc.replace(/[-\s]/g, '').toUpperCase();
 };
 
@@ -46,7 +46,7 @@ const normalizeISRC = (isrc) => {
  * @returns {string} Code ISRC formaté
  */
 const formatISRC = (isrc) => {
-  if (!isrc) return null;
+  if (!isrc) return '';
   
   // Normaliser d'abord
   const normalizedIsrc = normalizeISRC(isrc);
@@ -91,10 +91,69 @@ const getYearFromISRC = (isrc) => {
   return twoDigitYear > 50 ? 1900 + twoDigitYear : 2000 + twoDigitYear;
 };
 
+/**
+ * Extrait le code ISRC d'une réponse Acoustid
+ * @param {Object} response - Réponse de l'API Acoustid
+ * @returns {string|null} Code ISRC ou null si non trouvé
+ */
+const extractISRCFromAcoustid = (response) => {
+  if (!response || !response.results || !response.results.length) {
+    return null;
+  }
+
+  for (const result of response.results) {
+    if (result.recordings && result.recordings.length) {
+      for (const recording of result.recordings) {
+        if (recording.isrcs && recording.isrcs.length) {
+          return recording.isrcs[0]; // Retourne le premier ISRC trouvé
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Extrait le code ISRC d'une réponse Audd
+ * @param {Object} response - Réponse de l'API Audd
+ * @returns {string|null} Code ISRC ou null si non trouvé
+ */
+const extractISRCFromAudd = (response) => {
+  if (!response || !response.result) {
+    return null;
+  }
+
+  // Tente d'extraire directement de la réponse principale
+  if (response.result.isrc) {
+    return response.result.isrc;
+  }
+
+  // Cherche dans les données Spotify
+  if (response.result.spotify) {
+    if (response.result.spotify.isrc) {
+      return response.result.spotify.isrc;
+    }
+    // Chercher dans les external_ids de Spotify
+    if (response.result.spotify.external_ids && response.result.spotify.external_ids.isrc) {
+      return response.result.spotify.external_ids.isrc;
+    }
+  }
+
+  // Cherche dans les données Apple Music
+  if (response.result.apple_music && response.result.apple_music.isrc) {
+    return response.result.apple_music.isrc;
+  }
+
+  return null;
+};
+
 module.exports = {
   validateISRC,
   normalizeISRC,
   formatISRC,
   getCountryFromISRC,
-  getYearFromISRC
+  getYearFromISRC,
+  extractISRCFromAcoustid,
+  extractISRCFromAudd
 }; 

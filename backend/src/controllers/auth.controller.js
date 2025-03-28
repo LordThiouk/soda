@@ -1,5 +1,6 @@
 const authService = require('../services/auth.service');
-const { catchAsync } = require('../middlewares/errorHandler');
+const catchAsync = require('../utils/catchAsync');
+const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 
 /**

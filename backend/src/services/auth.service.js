@@ -1,4 +1,4 @@
-const { supabase, supabaseAdmin, executeSupabaseQuery } = require('../utils/supabase');
+const { supabase, supabaseAdmin, executeSupabaseQuery } = require('../config/supabase');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 

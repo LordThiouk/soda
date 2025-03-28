@@ -1,5 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
-const logger = require('./logger');
+const logger = require('../utils/logger');
+
+/**
+ * Configuration Supabase
+ * Utilise la version 2.x de Supabase JS Client
+ * Cette version utilise auth.signUp et auth.signInWithPassword pour l'authentification
+ */
 
 // Informations de connexion
 const supabaseUrl = process.env.SUPABASE_URL;
