@@ -2,6 +2,7 @@ const axios = require('axios');
 const { supabase, executeSupabaseQuery } = require('../config/supabase');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
+const { eventEmitter, EVENT_TYPES } = require('../utils/events');
 
 /**
  * Service pour la gestion des chaînes radio et TV
@@ -121,6 +122,19 @@ class ChannelService {
       
       if (!channel) {
         throw new AppError('Chaîne non trouvée', 404);
+      }
+      
+      // Vérifier si le statut a changé
+      if (channelData.status && channel.status !== channelData.status) {
+        // Émettre un événement de changement de statut
+        eventEmitter.emit(EVENT_TYPES.CHANNEL_STATUS_CHANGED, {
+          channelId: id,
+          channelName: channel.name,
+          prevStatus: channel.status,
+          status: channelData.status,
+          timestamp: new Date().toISOString(),
+          userId: channelData.userId // Si disponible dans les données
+        });
       }
       
       // Mettre à jour la chaîne
@@ -336,7 +350,7 @@ class ChannelService {
   }
   
   /**
-   * Teste la disponibilité d'une chaîne
+   * Teste la disponibilité d'une chaîne et met à jour son statut
    * @param {number} id - ID de la chaîne
    * @returns {Object} Résultat du test
    */
@@ -349,57 +363,66 @@ class ChannelService {
         throw new AppError('Chaîne non trouvée', 404);
       }
       
-      let isAvailable = false;
-      let statusCode = null;
-      let responseTime = null;
+      let success = false;
+      let message = '';
+      let oldStatus = channel.last_check_status;
       
       try {
-        // Mesurer le temps de réponse
-        const startTime = Date.now();
-        
-        // Tester l'URL avec un timeout de 5 secondes
-        const response = await axios.head(channel.url, {
+        // Faire une requête HEAD pour tester le flux
+        await axios.head(channel.stream_url, {
           timeout: 5000,
-          validateStatus: () => true // Accepter tous les codes d'état
+          headers: {
+            'User-Agent': 'SODAV-Monitor/1.0'
+          }
         });
         
-        const endTime = Date.now();
-        responseTime = endTime - startTime;
-        
-        statusCode = response.status;
-        isAvailable = response.status >= 200 && response.status < 400;
-      } catch (testError) {
-        logger.warn(`Erreur lors du test de la chaîne ${channel.name}:`, testError.message);
-        isAvailable = false;
-        statusCode = testError.response?.status || null;
+        // Si on arrive ici, la chaîne est disponible
+        success = true;
+        message = 'Chaîne accessible';
+      } catch (error) {
+        // La chaîne n'est pas accessible
+        success = false;
+        message = `Chaîne inaccessible: ${error.message}`;
       }
       
-      // Enregistrer le résultat du test dans la base de données
-      const currentTime = new Date().toISOString();
+      // Mettre à jour le statut de la chaîne
+      const updatedChannel = await executeSupabaseQuery(() => 
+        supabase
+          .from('channels')
+          .update({
+            last_check_status: success ? 'active' : 'inactive',
+            last_check_time: new Date().toISOString(),
+            last_check_message: message
+          })
+          .eq('id', id)
+          .select()
+          .single()
+      );
       
-      await supabase
-        .from('channels')
-        .update({
-          last_check_status: isAvailable,
-          last_check_time: currentTime,
-          updated_at: currentTime
-        })
-        .eq('id', id);
+      // Si le statut a changé, émettre un événement
+      if (oldStatus !== (success ? 'active' : 'inactive')) {
+        eventEmitter.emit(EVENT_TYPES.CHANNEL_STATUS_CHANGED, {
+          channelId: id,
+          channelName: channel.name,
+          prevStatus: oldStatus || 'unknown',
+          status: success ? 'active' : 'inactive',
+          timestamp: new Date().toISOString(),
+          // Ici, nous n'avons pas directement l'ID de l'utilisateur responsable
+          // Dans un système réel, vous pourriez avoir une liste d'utilisateurs abonnés à cette chaîne
+          message
+        });
+      }
       
       return {
-        id: channel.id,
-        name: channel.name,
-        url: channel.url,
-        isAvailable,
-        statusCode,
-        responseTime,
-        testedAt: currentTime
+        success,
+        message,
+        channel: updatedChannel
       };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
-      logger.error(`Erreur non gérée lors du test de la chaîne ${id}:`, error);
+      logger.error(`Erreur lors du test de la chaîne ${id}:`, error);
       throw new AppError('Erreur lors du test de la chaîne', 500);
     }
   }

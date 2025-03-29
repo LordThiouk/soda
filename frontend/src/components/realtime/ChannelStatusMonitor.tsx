@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { subscribeToChannelStatus, fetchChannelStatuses } from "@/lib/supabase";
+import { useWebSocket } from "@/lib/hooks/useWebSocket";
 
 interface ChannelStatus {
   id: number;
@@ -12,6 +13,45 @@ interface ChannelStatus {
   last_check_status: boolean | null;
   last_check_time: string | null;
 }
+
+// Mock data for development when Supabase isn't available
+const MOCK_CHANNELS: ChannelStatus[] = [
+  {
+    id: 1,
+    name: "RTS1",
+    status: "radio",
+    last_check_status: true,
+    last_check_time: new Date().toISOString()
+  },
+  {
+    id: 2,
+    name: "Sud FM",
+    status: "radio",
+    last_check_status: true,
+    last_check_time: new Date().toISOString()
+  },
+  {
+    id: 3,
+    name: "RFM",
+    status: "radio",
+    last_check_status: false,
+    last_check_time: new Date().toISOString()
+  },
+  {
+    id: 4,
+    name: "TFM",
+    status: "tv",
+    last_check_status: true,
+    last_check_time: new Date().toISOString()
+  },
+  {
+    id: 5,
+    name: "2STV",
+    status: "tv",
+    last_check_status: null,
+    last_check_time: null
+  }
+];
 
 interface ChannelStatusMonitorProps {
   limit?: number;
@@ -28,6 +68,7 @@ export default function ChannelStatusMonitor({
 }: ChannelStatusMonitorProps) {
   const [channels, setChannels] = useState<ChannelStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const { authenticated } = useWebSocket();
 
   // Formater la date et l'heure
   const formatDateTime = (dateString: string | null) => {
@@ -47,10 +88,22 @@ export default function ChannelStatusMonitor({
   const loadChannelStatuses = async () => {
     setLoading(true);
     try {
+      // Use mock data in development when Supabase might not be available
+      if (process.env.NODE_ENV === 'development' && !authenticated) {
+        console.log("Using mock channel data in development mode");
+        setChannels(MOCK_CHANNELS.slice(0, limit));
+        return;
+      }
+      
       const data = await fetchChannelStatuses();
       setChannels(data.slice(0, limit) as ChannelStatus[]);
     } catch (error) {
       console.error("Failed to fetch channel statuses:", error);
+      // Fallback to mock data on error in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Using mock channel data after error");
+        setChannels(MOCK_CHANNELS.slice(0, limit));
+      }
     } finally {
       setLoading(false);
     }

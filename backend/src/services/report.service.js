@@ -1,6 +1,7 @@
 const { supabase, executeSupabaseQuery } = require('../config/supabase');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
+const { eventEmitter, EVENT_TYPES } = require('../utils/events');
 
 /**
  * Service pour la gestion des rapports
@@ -123,7 +124,7 @@ class ReportService {
       
       // Dans un environnement de production réel, on déclencherait ici un job de génération asynchrone
       // Ici, on simule le processus (à adapter pour l'implémentation réelle)
-      this.processReportGeneration(report.id, parameters);
+      this.processReportGeneration(report.id, parameters, userId, name);
       
       return report.data || report;
     } catch (error) {
@@ -139,8 +140,10 @@ class ReportService {
    * Traite la génération asynchrone d'un rapport (simulation)
    * @param {string} reportId - ID du rapport
    * @param {Object} parameters - Paramètres du rapport
+   * @param {string} userId - ID de l'utilisateur
+   * @param {string} reportName - Nom du rapport
    */
-  async processReportGeneration(reportId, parameters) {
+  async processReportGeneration(reportId, parameters, userId, reportName) {
     // Cette méthode simule la génération asynchrone du rapport
     // Dans une implémentation réelle, cela pourrait être un job de fond
     setTimeout(async () => {
@@ -156,6 +159,15 @@ class ReportService {
           .eq('id', reportId);
           
         logger.info(`Rapport ${reportId} généré avec succès`);
+        
+        // Émettre un événement de rapport généré
+        eventEmitter.emit(EVENT_TYPES.REPORT_GENERATED, {
+          reportId,
+          reportName,
+          userId,
+          timestamp: new Date().toISOString(),
+          format: parameters.format || 'pdf'
+        });
       } catch (error) {
         logger.error(`Erreur lors de la génération du rapport ${reportId}:`, error);
         
@@ -165,6 +177,15 @@ class ReportService {
             status: 'error'
           })
           .eq('id', reportId);
+        
+        // Émettre un événement d'échec de génération de rapport
+        eventEmitter.emit(EVENT_TYPES.REPORT_FAILED, {
+          reportId,
+          reportName,
+          userId,
+          timestamp: new Date().toISOString(),
+          error: error.message || 'Erreur lors de la génération du rapport'
+        });
       }
     }, 5000); // Simuler un délai de 5 secondes pour la génération
   }

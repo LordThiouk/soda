@@ -1,7 +1,7 @@
 // Charger les variables d'environnement
 require('dotenv').config();
 
-const app = require('./app');
+const server = require('./app');
 const logger = require('./utils/logger');
 
 // Vérification des variables d'environnement essentielles
@@ -23,7 +23,7 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-// Port sur lequel le serveur écoute
+// Port configuration
 const PORT = process.env.PORT || 5000;
 
 // Gestion des erreurs non captées
@@ -33,10 +33,9 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// Démarrer le serveur
-const server = app.listen(PORT, () => {
-  logger.info(`Serveur démarré en mode ${process.env.NODE_ENV}`);
-  logger.info(`Écoute sur le port ${PORT}`);
+// Start the server
+server.listen(PORT, () => {
+  logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   logger.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
 });
 

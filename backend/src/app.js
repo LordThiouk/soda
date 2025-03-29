@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const path = require('path');
+const http = require('http');
 
 const logger = require('./utils/logger');
 const { errorHandler } = require('./middlewares/errorHandler');
@@ -17,11 +18,46 @@ const detectionRoutes = require('./routes/detection.routes');
 const reportRoutes = require('./routes/report.routes');
 const songRoutes = require('./routes/song.routes');
 const apiKeyRoutes = require('./routes/apiKey.routes');
+const notificationRoutes = require('./routes/notification.routes');
+
+// Initialiser le service d'événements (cela enregistre les gestionnaires d'événements)
+require('./services/event.service');
+logger.info('Service d\'événements initialisé');
+
+// Importer automatiquement les stations radio au démarrage du serveur
+const channelService = require('./services/channel.service');
+(async () => {
+  try {
+    logger.info('Importation automatique des stations radio depuis RadioBrowser API...');
+    const result = await channelService.importRadioStations(false); // false = ne pas écraser les stations existantes
+    logger.info(`Import automatique de stations radio terminé: ${result.imported} stations importées, ${result.skipped} ignorées, ${result.errors} erreurs`);
+  } catch (error) {
+    logger.error('Erreur lors de l\'importation automatique des stations radio:', error);
+  }
+})();
+
+// For debugging route loading issues
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:');
+  console.error(err);
+  // Don't exit the process, just log the error
+});
 
 // Configuration de l'application
 const app = express();
 
-// Middleware de parsing
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize WebSocket server
+const { initSocketServer } = require('./websocket/socketServer');
+initSocketServer(server);
+logger.info('WebSocket server attached to HTTP server');
+
+// For production
+app.set('trust proxy', 1);
+
+// Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -31,45 +67,44 @@ app.use(helmet());
 // Configuration CORS
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Logging des requêtes HTTP
-app.use(morgan('dev', {
-  stream: {
-    write: (message) => logger.http(message.trim())
-  }
-}));
+// Logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('common'));
+}
 
-// Protection contre les attaques par force brute
-const apiLimiter = rateLimit({
+// Rate limiting
+const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
+  max: 1000, // 1000 requests per window
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    status: 429,
-    message: 'Trop de requêtes, veuillez réessayer plus tard.'
+  message: 'Trop de requêtes, veuillez réessayer plus tard.',
+  skip: (req) => {
+    // Skip rate limiting for the API docs
+    return req.path.startsWith('/api-docs');
   }
 });
 
-// Appliquer le rate limiting aux routes d'authentification et d'API
-app.use('/api/auth', apiLimiter);
-app.use('/api/detection', apiLimiter);
+// Apply rate limiting to all API routes
+app.use('/api', limiter);
 
-// Configuration Swagger
+// Documentation Swagger
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'SODAV Monitoring API',
+      title: 'SODAV Monitor API',
       version: '1.0.0',
-      description: 'API pour le système de monitoring des diffusions de la SODAV',
+      description: 'Documentation de l\'API SODAV Monitor',
       contact: {
-        name: 'SODAV',
-        url: 'https://www.sodav.sn',
-        email: 'contact@sodav.sn'
+        name: 'Support SODAV',
+        email: 'support@sodav.sn'
       }
     },
     servers: [
@@ -80,54 +115,44 @@ const swaggerOptions = {
     ],
     components: {
       securitySchemes: {
-        BearerAuth: {
+        bearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT'
-        },
-        ApiKeyAuth: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'X-API-Key'
         }
       }
-    }
+    },
+    security: [
+      {
+        bearerAuth: []
+      }
+    ]
   },
-  apis: ['./src/routes/*.js'] // Chemin vers les fichiers routes avec les annotations Swagger
+  apis: ['./src/routes/*.js']
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Route de santé
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'API opérationnelle',
-    timestamp: new Date().toISOString()
+// Routes
+app.get('/', (req, res) => {
+  res.json({
+    name: 'SODAV Monitor API',
+    version: '1.0.0',
+    documentation: '/api-docs'
   });
 });
 
-// Enregistrement des routes
 app.use('/api/auth', authRoutes);
 app.use('/api/channels', channelRoutes);
 app.use('/api/detection', detectionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/songs', songRoutes);
-app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/keys', apiKeyRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-// Dossier statique pour les téléchargements
-app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
-
-// Middleware de gestion des erreurs
+// Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Middleware pour les routes non trouvées
-app.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Impossible de trouver ${req.originalUrl} sur ce serveur`
-  });
-});
-
-module.exports = app; 
+// Export server instead of app
+module.exports = server; 

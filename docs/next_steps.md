@@ -45,8 +45,11 @@ Ce document décrit les phases de développement prévues et leur avancement pou
   - ✅ Système de file d'attente et back-off exponentiel
   - ✅ Gestion avancée des ressources système
   - ✅ Persistance et restauration automatique des sessions
-- 🔄 Configuration des souscriptions temps réel avec Supabase
-- ⬜ Implémentation des notifications
+- ✅ Configuration des souscriptions temps réel avec Supabase
+- ✅ Implémentation des notifications
+  - ✅ Schéma et backend pour les notifications
+  - ✅ Interface utilisateur des notifications
+  - ✅ Intégration avec le système d'événements pour génération automatique
 - ⬜ Fonctionnalités avancées de rapport
 - ⬜ Exportation de données (CSV, PDF, Excel)
 
@@ -93,6 +96,11 @@ Ce document décrit les phases de développement prévues et leur avancement pou
 - [x] Agrégation automatique des données par jour avec triggers SQL
 - [x] Tableau des statistiques quotidiennes par chaîne et par chanson
 - [x] Optimisation des requêtes avec indexation avancée
+
+### Importation des stations radio
+- [x] Importation automatique des stations radio depuis RadioBrowser API au démarrage du serveur
+- [x] Interface utilisateur pour importer manuellement ou mettre à jour les stations
+- [x] Filtrage des stations par pays (concentration sur les stations sénégalaises)
 
 ## Ressources utiles
 

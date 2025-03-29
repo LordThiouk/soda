@@ -5,7 +5,8 @@ import {
   SheetContent, 
   SheetTrigger 
 } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, User } from "lucide-react";
+import { NotificationsPopover } from "@/components/ui/NotificationsPopover";
 
 export default function Header() {
   const navItems = [
@@ -14,6 +15,9 @@ export default function Header() {
     { label: "Rapports", href: "/rapports" },
     { label: "Paramètres", href: "/parametres" },
   ];
+
+  // Pour simuler si l'utilisateur est connecté 
+  const isLoggedIn = true; // TODO: Récupérer depuis le contexte d'authentification
 
   return (
     <header className="sticky top-0 z-10 w-full border-b border-border bg-card">
@@ -39,14 +43,23 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/login">Connexion</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/signup">Inscription</Link>
-            </Button>
-          </div>
+          {isLoggedIn ? (
+            <div className="hidden md:flex items-center gap-2">
+              <NotificationsPopover />
+              <Button variant="ghost" size="icon">
+                <User className="h-5 w-5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="hidden md:flex gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/login">Connexion</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/signup">Inscription</Link>
+              </Button>
+            </div>
+          )}
 
           {/* Menu mobile */}
           <Sheet>
@@ -66,14 +79,23 @@ export default function Header() {
                     {item.label}
                   </Link>
                 ))}
-                <div className="flex flex-col gap-2 mt-4">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/login">Connexion</Link>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/signup">Inscription</Link>
-                  </Button>
-                </div>
+                {isLoggedIn ? (
+                  <div className="flex gap-2 mt-4">
+                    <NotificationsPopover />
+                    <Button variant="ghost" size="icon">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 mt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/login">Connexion</Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link href="/signup">Inscription</Link>
+                    </Button>
+                  </div>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

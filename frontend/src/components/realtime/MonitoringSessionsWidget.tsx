@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,7 @@ import {
   Tv, 
   AlertTriangle, 
   Loader2, 
-  CirclePlus 
+  PlusCircle 
 } from "lucide-react";
 import Link from "next/link";
 import detectionService, { MonitoringSession } from '@/services/detectionService';
@@ -175,7 +177,7 @@ const MonitoringSessionsWidget: React.FC<MonitoringSessionsWidgetProps> = ({
           </div>
           <Link href="/stations">
             <Button variant="outline">
-              <CirclePlus className="h-4 w-4 mr-2" />
+              <PlusCircle className="h-4 w-4 mr-2" />
               Ajouter
             </Button>
           </Link>

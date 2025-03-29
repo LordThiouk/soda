@@ -5,13 +5,14 @@ const logger = require('../utils/logger');
 const { validateISRC, normalizeISRC, formatISRC } = require('../utils/isrc');
 const channelService = require('./channel.service');
 const os = require('os'); // Pour la surveillance des ressources système
+const { eventEmitter, EVENT_TYPES } = require('../utils/events');
 
 // Configuration globale pour la gestion des ressources
 const RESOURCE_LIMITS = {
   MAX_CONCURRENT_SESSIONS: parseInt(process.env.MAX_CONCURRENT_SESSIONS, 10) || 10,
-  CPU_THRESHOLD: parseFloat(process.env.CPU_THRESHOLD) || 0.8, // 80% d'utilisation CPU max
-  MEMORY_THRESHOLD: parseFloat(process.env.MEMORY_THRESHOLD) || 0.8, // 80% d'utilisation mémoire max
-  RESOURCE_CHECK_INTERVAL: parseInt(process.env.RESOURCE_CHECK_INTERVAL, 10) || 60000, // Vérification toutes les 60 secondes
+  CPU_THRESHOLD: parseFloat(process.env.CPU_THRESHOLD) || 0.95, // 95% d'utilisation CPU max (au lieu de 0.8)
+  MEMORY_THRESHOLD: parseFloat(process.env.MEMORY_THRESHOLD) || 0.98, // 98% d'utilisation mémoire max (au lieu de 0.8)
+  RESOURCE_CHECK_INTERVAL: parseInt(process.env.RESOURCE_CHECK_INTERVAL, 10) || 120000, // Vérification toutes les 2 minutes (au lieu de 60 secondes)
 };
 
 /**
@@ -127,7 +128,18 @@ class DetectionService {
                   detected_at: sessionInfo.lastDetectionTime
                 }]);
               
-              // Si une URL de callback est spécifiée, envoyer une notification
+              // Émettre un événement de détection de chanson qui déclenchera une notification
+              eventEmitter.emit(EVENT_TYPES.SONG_DETECTED, {
+                channelId: task.channelId,
+                channelName: task.channelName,
+                songTitle: detectionResult.song.title,
+                songArtist: detectionResult.song.artist,
+                timestamp: sessionInfo.lastDetectionTime,
+                detectionId: detectionResult.detection_id,
+                userId: sessionInfo.userId
+              });
+              
+              // Si une URL de callback est spécifiée, envoyer également une notification
               if (sessionInfo.callbackUrl) {
                 try {
                   await axios.post(sessionInfo.callbackUrl, {
@@ -216,6 +228,19 @@ class DetectionService {
     
     // Sauvegarder les informations d'échec
     this.failedDetections.set(channelId, failureInfo);
+    
+    // Émettre un événement d'erreur qui déclenchera une notification
+    const sessionInfo = this.activeMonitoringSessions.get(channelId);
+    if (sessionInfo && sessionInfo.userId) {
+      eventEmitter.emit(EVENT_TYPES.DETECTION_ERROR, {
+        channelId,
+        channelName,
+        error: errorMessage,
+        failureCount: failureInfo.failureCount,
+        timestamp: new Date().toISOString(),
+        userId: sessionInfo.userId
+      });
+    }
   }
   
   /**
@@ -265,6 +290,15 @@ class DetectionService {
       
       if (cpuOverloaded || memoryOverloaded) {
         logger.warn(`Surcharge système détectée - CPU: ${(cpuUsage * 100).toFixed(2)}%, Mémoire: ${(memoryUsage * 100).toFixed(2)}%`);
+        
+        // Émettre un événement de surcharge système
+        eventEmitter.emit(EVENT_TYPES.SYSTEM_OVERLOAD, {
+          cpuUsage,
+          memoryUsage,
+          timestamp: new Date().toISOString(),
+          // Dans un système réel, vous récupéreriez les IDs des administrateurs depuis la base de données
+          adminId: process.env.ADMIN_USER_ID // Administrateur système
+        });
         
         // Prendre des mesures pour réduire la charge
         await this.reduceSystemLoad(cpuOverloaded, memoryOverloaded);
@@ -327,152 +361,174 @@ class DetectionService {
    * Restaure les sessions de surveillance actives depuis la base de données
    */
   async restoreMonitoringSessions() {
-    try {
-      logger.info('Restauration des sessions de surveillance...');
-      
-      // Récupérer toutes les sessions actives de la base de données
-      const { data: activeSessions, error } = await supabase
-        .from('monitoring_sessions')
-        .select(`
-          id,
-          channel_id,
-          interval_seconds,
-          callback_url,
-          started_at,
-          last_detection_at,
-          detection_count,
-          channels (
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
+    
+    const attemptRestore = async () => {
+      try {
+        logger.info('Restauration des sessions de surveillance...');
+        
+        // Récupérer toutes les sessions actives de la base de données
+        const { data: activeSessions, error } = await supabase
+          .from('monitoring_sessions')
+          .select(`
             id,
-            name,
-            url
-          )
-        `)
-        .eq('status', 'active');
+            channel_id,
+            interval_seconds,
+            callback_url,
+            started_at,
+            last_detection_at,
+            detection_count,
+            channels (
+              id,
+              name,
+              url
+            )
+          `)
+          .eq('status', 'active');
+          
+        if (error) {
+          throw error;
+        }
         
-      if (error) {
-        logger.error('Erreur lors de la récupération des sessions de surveillance:', error);
-        return;
-      }
-      
-      if (!activeSessions || activeSessions.length === 0) {
-        logger.info('Aucune session de surveillance active à restaurer');
-        return;
-      }
-      
-      logger.info(`${activeSessions.length} sessions de surveillance actives trouvées`);
-      
-      // Restaurer chaque session
-      for (const session of activeSessions) {
-        const channelId = session.channel_id;
-        const channel = session.channels;
+        if (!activeSessions || activeSessions.length === 0) {
+          logger.info('Aucune session de surveillance active à restaurer');
+          return;
+        }
         
-        // Créer une entrée pour la session de surveillance
-        const sessionInfo = {
-          sessionId: session.id,
-          channelId,
-          channelName: channel.name,
-          startTime: session.started_at,
-          intervalSeconds: session.interval_seconds,
-          callbackUrl: session.callback_url,
-          lastDetectionTime: session.last_detection_at,
-          detectionCount: session.detection_count,
-          lastDetectedSong: null, // Sera mis à jour lors de la prochaine détection
-          status: 'active'
-        };
+        logger.info(`${activeSessions.length} sessions de surveillance actives trouvées`);
         
-        // Stocker les informations de session
-        this.activeMonitoringSessions.set(channelId, sessionInfo);
-        
-        // Créer une fonction de détection pour cette chaîne (même code que dans startRealTimeDetection)
-        const detectFunction = async () => {
-          try {
-            logger.info(`Exécution de la détection programmée pour ${channel.name} (ID: ${channelId})`);
-            
-            // Récupérer un échantillon audio de la chaîne
-            const audioSample = await this.captureAudioSample(channel.url);
-            
-            // Si l'échantillon est valide, procéder à l'identification
-            if (audioSample) {
-              const detectionResult = await this.identifySong({
-                channel_id: channelId,
-                audio_sample: audioSample,
-                timestamp: new Date().toISOString()
-              });
+        // Restaurer chaque session
+        for (const session of activeSessions) {
+          const channelId = session.channel_id;
+          const channel = session.channels;
+          
+          // Créer une entrée pour la session de surveillance
+          const sessionInfo = {
+            sessionId: session.id,
+            channelId,
+            channelName: channel.name,
+            startTime: session.started_at,
+            intervalSeconds: session.interval_seconds,
+            callbackUrl: session.callback_url,
+            lastDetectionTime: session.last_detection_at,
+            detectionCount: session.detection_count,
+            lastDetectedSong: null, // Sera mis à jour lors de la prochaine détection
+            status: 'active'
+          };
+          
+          // Stocker les informations de session
+          this.activeMonitoringSessions.set(channelId, sessionInfo);
+          
+          // Créer une fonction de détection pour cette chaîne (même code que dans startRealTimeDetection)
+          const detectFunction = async () => {
+            try {
+              logger.info(`Exécution de la détection programmée pour ${channel.name} (ID: ${channelId})`);
               
-              // Mettre à jour les informations de session
-              const sessionInfo = this.activeMonitoringSessions.get(channelId);
-              if (sessionInfo) {
-                sessionInfo.lastDetectionTime = new Date().toISOString();
-                sessionInfo.detectionCount += 1;
+              // Récupérer un échantillon audio de la chaîne
+              const audioSample = await this.captureAudioSample(channel.url);
+              
+              // Si l'échantillon est valide, procéder à l'identification
+              if (audioSample) {
+                const detectionResult = await this.identifySong({
+                  channel_id: channelId,
+                  audio_sample: audioSample,
+                  timestamp: new Date().toISOString()
+                });
                 
-                if (detectionResult.success) {
-                  sessionInfo.lastDetectedSong = {
-                    title: detectionResult.song.title,
-                    artist: detectionResult.song.artist,
-                    detection_id: detectionResult.detection_id
-                  };
+                // Mettre à jour les informations de session
+                const sessionInfo = this.activeMonitoringSessions.get(channelId);
+                if (sessionInfo) {
+                  sessionInfo.lastDetectionTime = new Date().toISOString();
+                  sessionInfo.detectionCount += 1;
                   
-                  // Enregistrer la détection dans la base de données
-                  await supabase
-                    .from('monitoring_detections')
-                    .insert([{
-                      session_id: sessionInfo.sessionId,
-                      detection_id: detectionResult.detection_id,
-                      detected_at: sessionInfo.lastDetectionTime
-                    }]);
-                  
-                  // Si une URL de callback est spécifiée, envoyer une notification
-                  if (sessionInfo.callbackUrl) {
-                    try {
-                      await axios.post(sessionInfo.callbackUrl, {
-                        event: 'song_detected',
-                        channel_id: channelId,
-                        channel_name: channel.name,
-                        timestamp: sessionInfo.lastDetectionTime,
-                        detection: detectionResult
-                      });
-                    } catch (callbackError) {
-                      logger.error(`Erreur lors de l'envoi de la notification au callback:`, callbackError);
+                  if (detectionResult.success) {
+                    sessionInfo.lastDetectedSong = {
+                      title: detectionResult.song.title,
+                      artist: detectionResult.song.artist,
+                      detection_id: detectionResult.detection_id
+                    };
+                    
+                    // Enregistrer la détection dans la base de données
+                    await supabase
+                      .from('monitoring_detections')
+                      .insert([{
+                        session_id: sessionInfo.sessionId,
+                        detection_id: detectionResult.detection_id,
+                        detected_at: sessionInfo.lastDetectionTime
+                      }]);
+                    
+                    // Si une URL de callback est spécifiée, envoyer une notification
+                    if (sessionInfo.callbackUrl) {
+                      try {
+                        await axios.post(sessionInfo.callbackUrl, {
+                          event: 'song_detected',
+                          channel_id: channelId,
+                          channel_name: channel.name,
+                          timestamp: sessionInfo.lastDetectionTime,
+                          detection: detectionResult
+                        });
+                      } catch (callbackError) {
+                        logger.error(`Erreur lors de l'envoi de la notification au callback:`, callbackError);
+                      }
                     }
                   }
+                  
+                  // Mettre à jour les informations de session dans la base de données
+                  await supabase
+                    .from('monitoring_sessions')
+                    .update({
+                      last_detection_at: sessionInfo.lastDetectionTime,
+                      detection_count: sessionInfo.detectionCount
+                    })
+                    .eq('id', sessionInfo.sessionId);
                 }
-                
-                // Mettre à jour les informations de session dans la base de données
-                await supabase
-                  .from('monitoring_sessions')
-                  .update({
-                    last_detection_at: sessionInfo.lastDetectionTime,
-                    detection_count: sessionInfo.detectionCount
-                  })
-                  .eq('id', sessionInfo.sessionId);
               }
+            } catch (error) {
+              logger.error(`Erreur lors de la détection automatique pour ${channel.name}:`, error);
+              
+              // Enregistrer l'erreur dans la base de données
+              await supabase
+                .from('monitoring_errors')
+                .insert([{
+                  session_id: this.activeMonitoringSessions.get(channelId)?.sessionId,
+                  error_message: error.message || 'Erreur inconnue',
+                  error_stack: error.stack,
+                  occurred_at: new Date().toISOString()
+                }]);
             }
-          } catch (error) {
-            logger.error(`Erreur lors de la détection automatique pour ${channel.name}:`, error);
-            
-            // Enregistrer l'erreur dans la base de données
-            await supabase
-              .from('monitoring_errors')
-              .insert([{
-                session_id: this.activeMonitoringSessions.get(channelId)?.sessionId,
-                error_message: error.message || 'Erreur inconnue',
-                error_stack: error.stack,
-                occurred_at: new Date().toISOString()
-              }]);
+          };
+          
+          // Configurer l'intervalle de détection
+          const intervalId = setInterval(detectFunction, session.interval_seconds * 1000);
+          this.monitoringIntervals.set(channelId, intervalId);
+          
+          logger.info(`Session de surveillance restaurée pour la chaîne ${channel.name} (ID: ${channelId})`);
+        }
+        
+        logger.info('Restauration des sessions de surveillance terminée');
+      } catch (error) {
+        retryCount++;
+        if (error.message && error.message.includes('fetch failed') && retryCount < MAX_RETRIES) {
+          const delay = 2000 * retryCount; // Backoff exponentiel
+          logger.warn(`Erreur de connexion lors de la restauration des sessions (tentative ${retryCount}/${MAX_RETRIES}). Nouvelle tentative dans ${delay}ms...`);
+          
+          // Attendre un peu avant de réessayer
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return await attemptRestore();
+        } else {
+          logger.error('Erreur lors de la restauration des sessions de surveillance:', error);
+          
+          // Notifier l'application pour éviter un blocage complet
+          if (error.message && error.message.includes('fetch failed')) {
+            logger.info('Problème de connexion réseau détecté. Vérifiez votre connexion à Supabase.');
           }
-        };
-        
-        // Configurer l'intervalle de détection
-        const intervalId = setInterval(detectFunction, session.interval_seconds * 1000);
-        this.monitoringIntervals.set(channelId, intervalId);
-        
-        logger.info(`Session de surveillance restaurée pour la chaîne ${channel.name} (ID: ${channelId})`);
+        }
       }
-      
-      logger.info('Restauration des sessions de surveillance terminée');
-    } catch (error) {
-      logger.error('Erreur lors de la restauration des sessions de surveillance:', error);
-    }
+    };
+    
+    // Démarrer la tentative de restauration
+    await attemptRestore();
   }
   
   /**
@@ -1241,17 +1297,24 @@ class DetectionService {
       // Exécuter une première détection immédiatement en l'ajoutant à la file
       intervalFunction();
       
+      // Après avoir démarré la session avec succès
+      logger.info(`Session de surveillance démarrée pour ${channel.name} (ID: ${channelId})`);
+      
+      // Émettre un événement de démarrage de détection
+      eventEmitter.emit(EVENT_TYPES.DETECTION_STARTED, {
+        channelId,
+        channelName: channel.name,
+        timestamp: new Date().toISOString(),
+        userId: options.userId,
+        sessionId: sessionInfo.sessionId
+      });
+      
       return {
-        success: true,
-        message: `Surveillance en temps réel démarrée pour ${channel.name}`,
-        session: {
-          id: sessionInfo.sessionId,
-          channel_id: channelId,
-          channel_name: channel.name,
-          start_time: sessionInfo.startTime,
-          interval_seconds: intervalSeconds,
-          status: 'active'
-        }
+        sessionId: sessionInfo.sessionId,
+        channelId,
+        channelName: channel.name,
+        interval: options.interval,
+        startedAt: new Date().toISOString()
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -1299,16 +1362,22 @@ class DetectionService {
       // Supprimer la session des sessions actives
       this.activeMonitoringSessions.delete(channelId);
       
+      // Après avoir arrêté la session avec succès
+      logger.info(`Session de surveillance arrêtée pour ${channelId}: ${reason}`);
+      
+      // Émettre un événement d'arrêt de détection
+      eventEmitter.emit(EVENT_TYPES.DETECTION_STOPPED, {
+        channelId,
+        reason,
+        timestamp: new Date().toISOString(),
+        userId: sessionInfo ? sessionInfo.userId : undefined,
+        sessionId: sessionInfo ? sessionInfo.sessionId : undefined
+      });
+      
       return {
         success: true,
-        message: `Surveillance en temps réel arrêtée pour ${sessionInfo.channelName}`,
-        session: {
-          id: sessionInfo.sessionId,
-          channel_id: channelId,
-          status: 'stopped',
-          end_time: new Date().toISOString(),
-          reason: reason
-        }
+        message: `Session de surveillance arrêtée pour la chaîne ${channelId}`,
+        reason
       };
     } catch (error) {
       if (error instanceof AppError) {

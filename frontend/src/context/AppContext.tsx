@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import useAuth from '@/hooks/useAuth';
 import authService, { User } from '@/services/authService';
 import reportService, { DashboardStats } from '@/services/reportService';
+import { useWebSocket } from '@/lib/hooks/useWebSocket';
 
 interface AppContextType {
   user: User | null;
@@ -16,6 +17,8 @@ interface AppContextType {
   isAuthenticated: boolean;
   logout: () => Promise<void>;
   hasRole: (role: string | string[]) => boolean;
+  wsConnected: boolean;
+  wsAuthenticated: boolean;
 }
 
 // Valeurs par défaut pour le contexte
@@ -32,12 +35,16 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Fournisseur du contexte
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { user, isLoading, isAuthenticated, logout, hasRole } = useAuth();
+  const auth = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, logout, hasRole } = auth;
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [isLoadingStats, setIsLoadingStats] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Initialize WebSocket
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocket();
 
   // Fermer la sidebar sur mobile
   useEffect(() => {
@@ -63,7 +70,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
 
-  // Chargement des statistiques du tableau de bord
+  // Auto-fetch dashboard stats when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      refreshDashboardStats();
+    }
+  }, [isAuthenticated, user]);
+
+  // Refresh dashboard stats
   const refreshDashboardStats = async () => {
     if (!isAuthenticated) return;
     
@@ -72,28 +86,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const stats = await reportService.getDashboardStats();
       setDashboardStats(stats);
     } catch (error) {
-      console.error('Erreur lors du chargement des statistiques:', error);
+      console.error('Error fetching dashboard stats:', error);
     } finally {
       setIsLoadingStats(false);
     }
   };
-
-  // Charger les statistiques au chargement de l'application et lors de l'authentification
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      refreshDashboardStats();
-    }
-  }, [isAuthenticated, isLoading]);
 
   // Fonction pour basculer l'état de la sidebar
   const toggleSidebar = () => {
     setSidebarOpen((prev) => !prev);
   };
 
+  // Combined loading state
+  const isLoading = authLoading || isLoadingStats;
+
   // Valeur du contexte
   const contextValue: AppContextType = {
     user,
-    isLoading: isLoading || isLoadingStats,
+    isLoading,
     dashboardStats,
     sidebarOpen,
     toggleSidebar,
@@ -101,6 +111,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     logout,
     hasRole,
+    wsConnected,
+    wsAuthenticated
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
